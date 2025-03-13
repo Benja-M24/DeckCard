@@ -3,12 +3,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: ${NODE_ENV:-development} # Selecciona la etapa según el entorno
+      target: ${NODE_ENV}
     volumes:
-      - ./dist:/usr/src/app/UI/dist
-      - ./frontend/UI:/usr/src/app/UI
-      - /usr/src/app/UI/node_modules
-    command: sh -c '[ "$NODE_ENV" = "production" ] && nginx -g "daemon off;" || npm run dev'
+      # - ./dist:/usr/src/app/deckcard-ui/dist
+      - ./frontend/deckcard-ui:/usr/src/app/deckcard-ui
+      - /usr/src/app/deckcard-ui/node_modules
+    # command: sh -c '[ "$NODE_ENV" = "production" ] && nginx -g "daemon off;" || npm run dev'
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-server
@@ -46,7 +46,7 @@ services:
       - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
       - DJANGO_DEBUG=${DJANGO_DEBUG}
     # command: sh -c "python manage.py runserver 0.0.0.0:8800"
-    # command: sh -c "gunicorn myproject.wsgi:application --bind 0.0.0.0:8000 --workers 4"
+    # command: sh -c "gunicorn myproject.wsgi:application --bind 0.0.0.0:8800 --workers 4"
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-server
