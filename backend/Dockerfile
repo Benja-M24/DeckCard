@@ -1,3 +1,6 @@
+# Debug method
+# docker compose run --rm --entrypoint bash backend
+
 # Development stage
 FROM python:3.12.1 AS development
 # Configurar el directorio de trabajo
@@ -7,25 +10,16 @@ COPY requirements.txt .
 # Instalar dependencias
 RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el resto del proyecto
-# COPY ./API .
-# Crear el proyecto Django (este comando solo se ejecutará la primera vez)
-RUN django-admin startproject DeckCard
-# Exponer el puerto para el servidor Django
-EXPOSE 8800
+COPY ./API .
+# Ejecutar migraciones
+# RUN python manage.py migrate
 # Comando por defecto para iniciar Django
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8800"]
 
-
-# Build stage
-
-
-# # Production stage
-# pip install gunicorn
-# # Iniciar el servidor en producción
-# gunicorn myproject.wsgi:application --bind 0.0.0.0:8800 --workers 4
+# Production stage
 FROM python:3.12.1-slim AS production
 WORKDIR /usr/src/app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 8800
-CMD ["gunicorn", "DeckCard.wsgi:application", "--bind", "0.0.0.0:8800"]
+CMD ["gunicorn", "API.wsgi:application", "--bind", "0.0.0.0:8800", "--workers", "4"]

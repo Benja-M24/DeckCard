@@ -40,6 +40,9 @@ if os.getenv('DJANGO_ENV', 'development').lower() == 'production':
     # Add appropriate proxy headers if behind proxy
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     
+    # Configure trusted origins for CSRF and CORS
+    CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
+
     # Comment: The following security settings are managed by Traefik
     # and don't need to be duplicated here:
     # - SECURE_SSL_REDIRECT
@@ -52,6 +55,11 @@ if os.getenv('DJANGO_ENV', 'development').lower() == 'production':
 
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',') if host.strip()]
 
+# Always set CSRF trusted origins regardless of DEBUG mode
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
+if not CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS = ['https://api.deckcards.lussocastelli.com']
+
 
 # Application definition
 
@@ -62,6 +70,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    # Local apps
+    'cards.apps.CardsConfig',
+    'core',
 ]
 
 MIDDLEWARE = [
@@ -89,7 +101,7 @@ ROOT_URLCONF = 'DeckCard.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

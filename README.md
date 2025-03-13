@@ -11,7 +11,7 @@ Permite completar los campos de una tabla para generar un registro por cada cart
 #### backend (python y django admin interface)
 - Crear mazos
 - Eliminar mazo
-- renombrar mazo
+- Renombrar mazo
 - Ver lista de mazos
 
 - Añadir cartas al mazo
@@ -25,17 +25,17 @@ Permite completar los campos de una tabla para generar un registro por cada cart
 
 #### Frontend
 - Elegir mazo
-- mezclar
-- tomar la siguiente carta
+- Mezclar
+- Tomar la siguiente carta
 - Ver la carta en modo presentacion
-- Salir del modo prensentacion
+- Salir del modo presentacion
 
 ### Tablas de la BD
 - Mazos (ID, nombre, version, fecha automatica)
 - Cartas_negocios (ID, titulo, subtitulo, tipo, Costo, lista_De_niveles_Soportados, benefico_base = x - leng(nivles_Soportados), beneficio x turno en cada nivel= [a,b,c,d]) 
-- Niveles_de negocio (ID, n_Nivel, n_Wachines_necesarios, plus_De_Beneficio, )
-- Cartas_Personajes (ID, Nombre, Historia, edad, sexo, imagen, Atributos)
-- atributos_De_Personaje (ID, karma, dinero, fama, x)
+- Niveles_de_negocio (ID, n_Nivel, n_Wachines_necesarios, plus_De_Beneficio, )
+- Cartas_Personajes (ID, Nombre, Historia, edad, sexo, imagen, Atributos_de_personaje)
+- Atributos_de_personaje (ID, karma, dinero, fama, x)
 - Cartas_Especiales (ID, Titulo, frase, consinga, imagen)
 
 ### Proximas funcionalidades

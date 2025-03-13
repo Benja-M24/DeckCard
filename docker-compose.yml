@@ -3,16 +3,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: ${NODE_ENV}
+      target: ${NODE_ENV:-development}
     volumes:
       # - ./dist:/usr/src/app/deckcard-ui/dist
       - ./frontend/deckcard-ui:/usr/src/app/deckcard-ui
       - /usr/src/app/deckcard-ui/node_modules
-    # command: sh -c '[ "$NODE_ENV" = "production" ] && nginx -g "daemon off;" || npm run dev'
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-server
-      # https
       - traefik.http.routers.DeckCard-front-https.entrypoints=https
       - traefik.http.routers.DeckCard-front-https.rule=Host(`${DOMAIN}`)
       - traefik.http.routers.DeckCard-front-https.tls=true
@@ -45,8 +43,7 @@ services:
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
       - DJANGO_DEBUG=${DJANGO_DEBUG}
-    # command: sh -c "python manage.py runserver 0.0.0.0:8800"
-    # command: sh -c "gunicorn myproject.wsgi:application --bind 0.0.0.0:8800 --workers 4"
+      - DJANGO_CSRF_TRUSTED_ORIGINS=${DJANGO_CSRF_TRUSTED_ORIGINS}
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-server
@@ -55,7 +52,7 @@ services:
       - traefik.http.routers.DeckCard-back-https.tls=true
       - traefik.http.routers.DeckCard-back-https.tls.certresolver=le
       - traefik.http.routers.DeckCard-back-https.service=backend-DeckCard-service
-      - traefik.http.routers.DeckCard-back-https.middlewares=security-headers,admin-auth
+      - traefik.http.routers.DeckCard-back-https.middlewares=security-headers
       - traefik.http.services.backend-DeckCard-service.loadbalancer.server.port=8800
     networks:
       - traefik-server
@@ -98,8 +95,10 @@ services:
 
 networks:
   traefik-server:
+    name: traefik-server
     external: true
   DeckCard-network:
+    name: DeckCard-network
     driver: bridge
     internal: true
 
