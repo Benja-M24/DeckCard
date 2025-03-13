@@ -31,6 +31,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      # Entorno Python
       target: ${PYTHON_ENV:-development}
     volumes:
       - ./backend/API:/usr/src/app
@@ -38,9 +39,14 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${POSTGRES_DB}
-      - DJANGO_DEBUG=${DJANGO_DEBUG:-1}
-    command: sh -c "python manage.py runserver 0.0.0.0:8800"
+      - POSTGRES_DB_HOST=${POSTGRES_DB_HOST}
+      - POSTGRES_DB_PORT=${POSTGRES_DB_PORT}
+
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
+      - DJANGO_DEBUG=${DJANGO_DEBUG}
+    # command: sh -c "python manage.py runserver 0.0.0.0:8800"
+    # command: sh -c "gunicorn myproject.wsgi:application --bind 0.0.0.0:8000 --workers 4"
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-server
@@ -54,19 +60,23 @@ services:
     networks:
       - traefik-server
       - DeckCard-network
+    env_file:
+      - .env
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
 
   db:
-    image: postgres:15-alpine
+    image: postgres:15
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB_HOST: ${POSTGRES_DB_HOST}
+      POSTGRES_DB_PORT: ${POSTGRES_DB_PORT}
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-server

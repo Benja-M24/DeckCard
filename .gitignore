@@ -54,3 +54,4 @@ ENV/
 # Keep these files
 !.env.example
 !docker-compose.yml
+reverseproxy/docker-compose.yml

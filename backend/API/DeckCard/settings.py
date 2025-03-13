@@ -9,8 +9,9 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+# settings.py (mejora)
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +21,36 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-o7&figc!v8xs7l5j!y!_gx3=29t&xn_a$_(&wpp9xd$y)sy&0n'
-
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
+if not SECRET_KEY:
+    raise ValueError('DJANGO_SECRET_KEY must be set in environment variables')
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() == 'true'
+ 
+# Ensure debug is always False in production environments
+if os.getenv('DJANGO_ENV', 'development').lower() == 'production':
+    DEBUG = False
+    
+    # Session security settings (not related to HTTP headers)
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+    SESSION_COOKIE_AGE = 3600  # 1 hour in seconds
+    CSRF_COOKIE_HTTPONLY = True
+    
+    # Add appropriate proxy headers if behind proxy
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    
+    # Comment: The following security settings are managed by Traefik
+    # and don't need to be duplicated here:
+    # - SECURE_SSL_REDIRECT
+    # - SESSION_COOKIE_SECURE
+    # - CSRF_COOKIE_SECURE
+    # - SECURE_HSTS_SECONDS, SECURE_HSTS_INCLUDE_SUBDOMAINS, SECURE_HSTS_PRELOAD
+    # - SECURE_CONTENT_TYPE_NOSNIFF
+    # - SECURE_BROWSER_XSS_FILTER
+    # - X_FRAME_OPTIONS
 
-ALLOWED_HOSTS = ['api.deckcards.lussocastelli.com', 'localhost', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = [host.strip() for host in os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',') if host.strip()]
 
 
 # Application definition
@@ -47,7 +72,17 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Additional security middleware
+    'django.middleware.http.ConditionalGetMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
 ]
+
+# Content Security Policy - Only add if not handled by Traefik
+# If you want to handle CSP in Django instead of Traefik, uncomment and install django-csp
+# MIDDLEWARE.append('csp.middleware.CSPMiddleware')
+# CSP_DEFAULT_SRC = ("'self'",)
+# CSP_SCRIPT_SRC = ("'self'",)
+# CSP_STYLE_SRC = ("'self'",)
 
 ROOT_URLCONF = 'DeckCard.urls'
 
@@ -75,8 +110,16 @@ WSGI_APPLICATION = 'DeckCard.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB'),
+        'USER': os.getenv('POSTGRES_USER'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+        'HOST': os.getenv('POSTGRES_DB_HOST', 'bd'),
+        'PORT': os.getenv('POSTGRES_DB_PORT', 5432),
+        'CONN_MAX_AGE': 600,
+        'OPTIONS': {
+            'connect_timeout': 10,
+        }
     }
 }
 
