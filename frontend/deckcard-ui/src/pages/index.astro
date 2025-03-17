@@ -91,31 +91,33 @@ const sampleCartaPersonaje = {
         </div>
     </header>
     <!-- show personaje card -->
-    <section class="container mx-auto py-8">
+    <section class="w-full max-w-full overflow-hidden py-8">
         <div
-            class="flex flex-col lg:flex-row lg:gap-6 items-center justify-center mb-8 px-4"
+            class="flex flex-col lg:flex-row lg:gap-6 items-center mb-8 px-1 sm:px-2 max-w-full"
         >
             <!-- Filtro de cartas - 1/4 en pantallas grandes, full width en pequeñas -->
-            <div class="w-[min(45vw,500px)] lg:w-1/4 mb-6 lg:mb-0">
+            <div
+                class="w-[min(80vw,500px)] lg:max-w-1/4 mb-6 lg:mb-0 lg:justify-left"
+            >
                 <h3 class="text-lg font-bold py-2">Filtro de cartas</h3>
                 <div
-                    class="flex flex-col sm:flex-row xs:flex-wrap lg:flex-col gap-4 items-center"
+                    class="flex flex-col sm:flex-row xs:flex-wrap lg:flex-col gap-3 sm:gap-4 items-center w-full"
                 >
                     <a
                         href="?component=carta-negocio"
-                        class="px-4 py-2 rounded-md font-medium flex items-center justify-center text-center text-sm md:text-md lg:text-xl transition-colors duration-300 text-white bg-amber-600 hover:bg-amber-500 sm:flex-1 lg:flex-1 w-3/4 h-[min(12vw,70px)]"
+                        class="px-4 py-2 rounded-md font-medium flex items-center justify-center text-center text-sm md:text-md lg:text-xl transition-colors duration-300 text-white bg-amber-600 hover:bg-amber-500 sm:flex-1 lg:flex-1 w-3/4 h-[min(12vw,70px)] truncate"
                     >
                         Cartas de Negocio
                     </a>
                     <a
                         href="?component=carta-especial"
-                        class="px-4 py-2 rounded-md font-medium flex items-center justify-center text-center text-sm md:text-md lg:text-xl transition-colors duration-300 text-white bg-amber-600 hover:bg-amber-500 sm:flex-1 lg:flex-1 w-3/4 h-[min(12vw,70px)]"
+                        class="px-4 py-2 rounded-md font-medium flex items-center justify-center text-center text-sm md:text-md lg:text-xl transition-colors duration-300 text-white bg-amber-600 hover:bg-amber-500 sm:flex-1 lg:flex-1 w-3/4 h-[min(12vw,70px)] truncate"
                     >
                         Cartas Especiales
                     </a>
                     <a
                         href="?component=carta-personaje"
-                        class="px-4 py-2 rounded-md font-medium flex items-center justify-center text-center text-sm md:text-md lg:text-xl transition-colors duration-300 text-white bg-amber-600 hover:bg-amber-500 sm:flex-1 lg:flex-1 w-3/4 h-[min(12vw,70px)]"
+                        class="px-4 py-2 rounded-md font-medium flex items-center justify-center text-center text-sm md:text-md lg:text-xl transition-colors duration-300 text-white bg-amber-600 hover:bg-amber-500 sm:flex-1 lg:flex-1 w-3/4 h-[min(12vw,70px)] truncate"
                     >
                         Cartas de Personaje
                     </a>
@@ -124,11 +126,11 @@ const sampleCartaPersonaje = {
 
             <!-- Contenido de la carta - 3/4 en pantallas grandes, full width en pequeñas -->
             <div
-                class="w-[min(45vw,500px)] lg:w-3/4 rounded-3xl border-gray-500 border-l-1 border-b-2 border-t-3 border-r-3 shadow-xl relative"
+                class="max-w-xs sm:max-w-md md:max-w-lg lg:max-w-full lg:justify-right rounded-3xl border-gray-500 border-l-1 border-b-2 border-t-3 border-r-3 shadow-xl relative"
             >
                 <div class="static">
                     <div
-                        class="absolute top-1/2 -right-5 transform -translate-y-1/2 rounded-full bg-gray-400 hover:bg-gray-300 transition-colors duration-100 cursor-pointer font-bold text-gray-100 w-10 h-10 flex items-center justify-center"
+                        class="absolute top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-400 hover:bg-gray-300 transition-colors duration-100 cursor-pointer font-bold text-gray-100 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center z-10"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -145,7 +147,7 @@ const sampleCartaPersonaje = {
                         </svg>
                     </div>
                     <div
-                        class="absolute top-1/2 -left-5 transform -translate-y-1/2 rounded-full bg-gray-400 hover:bg-gray-300 transition-colors duration-100 cursor-pointer font-bold text-gray-100 w-10 h-10 flex items-center justify-center"
+                        class="absolute top-1/2 left-0 transform -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-400 hover:bg-gray-300 transition-colors duration-100 cursor-pointer font-bold text-gray-100 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center z-10"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -260,9 +262,7 @@ const sampleCartaPersonaje = {
                 </div>
             </div>
         </div>
-        <div
-            class="flex flex-wrap justify-center items-center mb-8 px-4 hidden"
-        >
+        <div class="flex flex-wrap justify-center items-center mb-8 px-4">
             <div class="w-1/2">
                 <input
                     type="text"
@@ -285,57 +285,61 @@ const sampleCartaPersonaje = {
                 </div>
             </div>
         </div>
-        <div class="flex items-start gap-4 flex-wrap">
-            <div class="container mx-auto px-4">
-                <div class="flex flex-row justify-center gap-4">
-                    <button
-                        id="shuffle-btn"
-                        class="px-4 py-2 w-[min(20vw,200px)] rounded-md font-medium transition-colors duration-300 shadow-sm text-white bg-amber-600 hover:bg-amber-500"
-                    >
-                        Mezclar Mazo
-                    </button>
-                    <div
-                        class="flex justify-between items-center bg-gray-200 rounded-lg p-2 gap-2"
-                    >
-                        <span class="text-sm">Vistas:</span>
-                        <span class="text-lg font-bold"> 2</span>
-                        <span class="text-sm">/</span>
-                        <span class="text-lg font-bold">40</span>
-                        <span class="text-sm">Restantes</span>
-                    </div>
-                    <button
-                        id="presentation-btn"
-                        class="px-4 py-2 w-[min(20vw,200px)] rounded-md font-medium transition-colors duration-300 shadow-sm text-white bg-amber-600 hover:bg-amber-500"
-                    >
-                        Modo Presentación
-                    </button>
+        <div
+            class="flex flex-row justify-center items-center gap-2 px-2 sm:px-6 max-w-full md:max-w-[50%] lg:max-w-[30%] mx-auto"
+        >
+            <button
+                id="shuffle-btn"
+                class="flex items-center justify-center px-4 py-2 w-1/3 rounded-md font-medium transition-colors duration-300 shadow-sm text-white bg-amber-600 hover:bg-amber-500"
+            >
+                Mezclar Mazo
+            </button>
+
+            <div
+                class="flex flex-col justify-center w-1/3 items-center bg-gray-200 rounded-lg p-2 gap-2"
+            >
+                <div class="flex flex-row justify-between items-center">
+                    <span class="text-xl font-bold">2 </span>
+                    <span class="text-xl font-bold"> / </span>
+                    <span class="text-xl font-bold"> 40</span>
+                </div>
+                <div class="flex flex-row justify-between items-center">
+                    <span class="text-xs">Vistas </span>
+                    <span class="text-sm font-bold"> / </span>
+                    <span class="text-xs">Restantes </span>
                 </div>
             </div>
+            <button
+                id="presentation-btn"
+                class="flex items-center justify-center px-4 py-2 w-1/3 rounded-md font-medium transition-colors duration-300 shadow-sm text-white bg-amber-600 hover:bg-amber-500"
+            >
+                Modo Presentación
+            </button>
         </div>
     </section>
-
-    <script>
-        // Client-side interactive functionality
-        document.addEventListener("DOMContentLoaded", () => {
-            // Shuffle button functionality
-            const shuffleBtn = document.getElementById("shuffle-btn");
-            if (shuffleBtn) {
-                shuffleBtn.addEventListener("click", () => {
-                    console.log("Shuffling deck...");
-                    // Implementation for shuffling deck would go here
-                    alert("Mazo mezclado!");
-                });
-            }
-
-            // Next card button functionality
-            const nextCardBtn = document.getElementById("next-card-btn");
-            if (nextCardBtn) {
-                nextCardBtn.addEventListener("click", () => {
-                    console.log("Drawing next card...");
-                    // Implementation for drawing next card would go here
-                    alert("Tomando siguiente carta...");
-                });
-            }
-        });
-    </script>
 </Layout>
+
+<script>
+    // Client-side interactive functionality
+    document.addEventListener("DOMContentLoaded", () => {
+        // Shuffle button functionality
+        const shuffleBtn = document.getElementById("shuffle-btn");
+        if (shuffleBtn) {
+            shuffleBtn.addEventListener("click", () => {
+                console.log("Shuffling deck...");
+                // Implementation for shuffling deck would go here
+                alert("Mazo mezclado!");
+            });
+        }
+
+        // Next card button functionality
+        const nextCardBtn = document.getElementById("next-card-btn");
+        if (nextCardBtn) {
+            nextCardBtn.addEventListener("click", () => {
+                console.log("Drawing next card...");
+                // Implementation for drawing next card would go here
+                alert("Tomando siguiente carta...");
+            });
+        }
+    });
+</script>
