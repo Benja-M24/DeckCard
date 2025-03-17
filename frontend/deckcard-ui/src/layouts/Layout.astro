@@ -1,6 +1,12 @@
 ---
 import "../styles/global.css";
 // import Welcome from "@components/Welcome.astro";
+
+interface Props {
+	title?: string;
+}
+
+const { title = "DeckCard" } = Astro.props;
 ---
 
 <!doctype html>
@@ -8,11 +14,32 @@ import "../styles/global.css";
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="format-detection" content="telephone=no" />
+		<meta name="language" content="es" />
 		<meta name="generator" content={Astro.generator} />
-		<title>DeckCard</title>
+		<meta
+			name="description"
+			content="DeckCard - Your Personalized Deck of Cards"
+		/>
+		<meta
+			name="keywords"
+			content="DeckCard, Cards, Game, Create, Personalized, Deckcards"
+		/>
+		<meta name="publisher" content="BM" />
+		<meta name="author" content="BM" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<title>{title}</title>
 	</head>
-	<body>
-		<h1 class="text-5xl font-bold underline">DeckCard</h1>
+	<body class="flex flex-col min-h-screen bg-gray-300">
+		<main class="flex-grow">
+			<slot />
+		</main>
+		<footer class="text-gray-500 text-sm text-center py-4 bg-gray-200">
+			<div class="container mx-auto">
+				<p class="text-gray-500 text-sm text-center">
+					© {new Date().getFullYear()} DeckCard. Licensed under MIT.
+				</p>
+			</div>
+		</footer>
 	</body>
 </html>
