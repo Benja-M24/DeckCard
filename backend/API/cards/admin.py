@@ -4,7 +4,6 @@ from .models import (
     NivelDeNegocio,
     TipoDeNegocio, 
     CartaNegocio, 
-    AtributoPersonaje, 
     CartaPersonaje, 
     CartaEspecial
 )
@@ -41,28 +40,19 @@ class TipoDeNegocioAdmin(admin.ModelAdmin):
 
 @admin.register(CartaNegocio)
 class CartaNegocioAdmin(admin.ModelAdmin):
-    list_display = ('titulo', 'subtitulo', 'tipo', 'costo', 'mazo', 'beneficio_base')
-    search_fields = ('titulo', 'subtitulo', 'tipo')
+    list_display = ('nombre', 'frase', 'tipo', 'precio', 'mazo', 'beneficio_base')
+    search_fields = ('nombre', 'frase', 'tipo')
     list_filter = ('tipo', 'mazo')
     filter_horizontal = ('niveles_soportados',)
 
-class AtributoPersonajeInline(admin.StackedInline):
-    model = AtributoPersonaje
-    can_delete = False
-
-@admin.register(AtributoPersonaje)
-class AtributoPersonajeAdmin(admin.ModelAdmin):
-    list_display = ('id', 'karma', 'dinero', 'fama')
-    search_fields = ('id',)
-
 @admin.register(CartaPersonaje)
 class CartaPersonajeAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'edad', 'sexo', 'mazo')
-    search_fields = ('nombre', 'historia')
-    list_filter = ('sexo', 'mazo')
+    list_display = ('nombre', 'descripcion', 'dinero', 'karma', 'fama', 'mazo')
+    search_fields = ('nombre', 'historia', 'descripcion')
+    list_filter = ('mazo',)
 
 @admin.register(CartaEspecial)
 class CartaEspecialAdmin(admin.ModelAdmin):
     list_display = ('titulo', 'frase', 'mazo')
-    search_fields = ('titulo', 'frase', 'consigna')
+    search_fields = ('titulo', 'frase', 'consignas_juego')
     list_filter = ('mazo',)

@@ -13,7 +13,10 @@ const { title = "DeckCard" } = Astro.props;
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+		/>
 		<meta name="format-detection" content="telephone=no" />
 		<meta name="language" content="es" />
 		<meta name="generator" content={Astro.generator} />
@@ -31,6 +34,23 @@ const { title = "DeckCard" } = Astro.props;
 		<title>{title}</title>
 	</head>
 	<body class="flex flex-col min-h-screen bg-gray-300">
+		<header
+			class="bg-gradient-to-r from-black to-amber-900 text-white shadow-md px-4 py-1 mb-6 w-full"
+		>
+			<div class="flex flex-wrap my-4 mx-2">
+				<h1 class="text-[min(10vw,50px)] font-bold self-center">
+					DeckCard
+				</h1>
+				<nav class="flex justify-end flex-1 py-4">
+					<a
+						href="?component=carta-negocio"
+						class="flex items-center justify-center px-4 h-full rounded-md font-medium transition-colors duration-200 shadow-sm text-white bg-amber-600 hover:bg-amber-500"
+					>
+						BM
+					</a>
+				</nav>
+			</div>
+		</header>
 		<main class="flex-grow">
 			<slot />
 		</main>

@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, re_path
+from django.urls import path, re_path, include
 from django.shortcuts import redirect
 from django.conf import settings
 from django.conf.urls.static import static
@@ -36,6 +36,9 @@ urlpatterns = [
     
     # Admin en su URL original (accesible tanto desde / como desde /admin/)
     path('admin/', admin.site.urls),
+    
+    # API de cartas
+    path('api/', include('cards.urls')),
     
     # Captura cualquier otra URL y devuelve 404
     re_path(r'^.*$', handle_404),

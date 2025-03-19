@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el resto del proyecto
 COPY ./API .
 # Ejecutar migraciones
+# RUN python manage.py makemigrations
 # RUN python manage.py migrate
 # Comando por defecto para iniciar Django
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8800"]

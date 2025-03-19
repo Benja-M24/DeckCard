@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator, MaxLengthValidator
 import json
 
 class Mazo(models.Model):
@@ -13,7 +14,7 @@ class Mazo(models.Model):
     class Meta:
         verbose_name = "Mazo"
         verbose_name_plural = "Mazos"
-        ordering = ['-fecha_creacion']
+        ordering = ['fecha_creacion']
 
     def __str__(self):
         return f"{self.nombre} (v{self.version})"
@@ -39,7 +40,8 @@ class NivelDeNegocio(models.Model):
     """
     n_nivel = models.PositiveIntegerField(verbose_name="Número de nivel")
     n_wachines_necesarios = models.PositiveIntegerField(verbose_name="Número de trabajadores necesarios")
-    plus_de_beneficio = models.FloatField(verbose_name="Plus de beneficio")
+    costo_mejora = models.PositiveIntegerField(verbose_name="Costo de mejora", validators=[MinValueValidator(1), MaxValueValidator(100)])
+    plus_de_beneficio = models.FloatField(verbose_name="Plus de beneficio", validators=[MinValueValidator(0.1), MaxValueValidator(100)])
     
     class Meta:
         verbose_name = "Nivel de negocio"
@@ -67,21 +69,52 @@ class CartaNegocio(models.Model):
     """
     Modelo para representar cartas de negocios.
     """
-    titulo = models.CharField(max_length=100, verbose_name="Título")
-    subtitulo = models.CharField(max_length=200, blank=True, verbose_name="Subtítulo")
-    tipo = models.ForeignKey(TipoDeNegocio, on_delete=models.CASCADE, verbose_name="Tipo")
-    costo = models.PositiveIntegerField(verbose_name="Costo")
-    mazo = models.ForeignKey(Mazo, related_name='cartas_negocio', on_delete=models.CASCADE, verbose_name="Mazo")
+    nombre = models.CharField(max_length=100, verbose_name="Nombre")
+    frase = models.CharField(max_length=200, blank=True, verbose_name="Frase")
+    precio = models.PositiveIntegerField(
+        default=3600,
+        verbose_name="Precio del Negocio",
+        validators=[
+            MinValueValidator(1, message='El precio no puede ser negativo'),
+            MaxValueValidator(100, message='Límite máximo: $ 100')
+        ]
+    )
     niveles_soportados = models.ManyToManyField(NivelDeNegocio, related_name='cartas', verbose_name="Niveles soportados")
-    beneficio_base = models.FloatField(verbose_name="Beneficio base")
-    beneficios_por_turno = models.TextField(default='Produce (4 * (nivel de negocio)) wachines por turno.', verbose_name="Beneficios por turno en cada nivel")
+    beneficio_base = models.IntegerField(
+        default=5,
+        verbose_name="beneficio base",
+        validators=[
+            MinValueValidator(1, message='Beneficio base minimo 1'),
+            MaxValueValidator(10, message='Beneficio base limite 10')
+        ]
+    )
+    beneficio_final = models.IntegerField(
+        default=5,
+        verbose_name="beneficio final",
+        validators=[
+            MinValueValidator(1, message='Beneficio final minimo 1'),
+            MaxValueValidator(10, message='Beneficio final limite 10')
+        ]
+    )
+    consignas_juego = models.JSONField(
+        default=list,
+        blank=True,
+        null=True,
+        verbose_name="Consignas del Negocio",
+        validators=[
+            MaxLengthValidator(5)
+        ]   
+    )
     
+    tipo = models.ForeignKey(TipoDeNegocio, on_delete=models.PROTECT, null=False, blank=False, related_name='cartas_negocio', verbose_name="Tipo de Negocio")
+    mazo = models.ForeignKey(Mazo, on_delete=models.PROTECT, null=False, blank=False, related_name='cartas_negocio', verbose_name="Mazo")
+
     class Meta:
         verbose_name = "Carta de negocio"
         verbose_name_plural = "Cartas de negocio"
     
     def __str__(self):
-        return self.titulo
+        return self.nombre
     
     def get_beneficios_por_turno(self):
         """Retorna los beneficios por turno como una lista"""
@@ -91,45 +124,68 @@ class CartaNegocio(models.Model):
         """Guarda los beneficios por turno como JSON"""
         self.beneficios_por_turno = json.dumps(beneficios_lista)
 
-class AtributoPersonaje(models.Model):
-    """
-    Modelo para representar atributos de personajes.
-    """
-    karma = models.IntegerField(default=0, verbose_name="Karma")
-    dinero = models.FloatField(default=0, verbose_name="Dinero")
-    fama = models.IntegerField(default=0, verbose_name="Fama")
-    extra = models.TextField(default='Recive $100 en cada turno', blank=True, null=True, verbose_name="Atributos extra")
-    
-    class Meta:
-        verbose_name = "Atributo de personaje"
-        verbose_name_plural = "Atributos de personaje"
-    
-    def __str__(self):
-        return f"Karma: {self.karma}, Dinero: {self.dinero}, Fama: {self.fama}"
-
 class CartaPersonaje(models.Model):
     """
     Modelo para representar cartas de personajes.
-    """
-    SEXO_CHOICES = [
-        ('M', 'Masculino'),
-        ('F', 'Femenino')
-    ]
+    """ 
     
     nombre = models.CharField(max_length=100, verbose_name="Nombre")
-    historia = models.TextField(verbose_name="Historia")
-    edad = models.PositiveIntegerField(verbose_name="Edad")
-    sexo = models.CharField(max_length=1, choices=SEXO_CHOICES, verbose_name="Sexo")
-    imagen = models.ImageField(upload_to='personajes/', blank=True, null=True, verbose_name="Imagen")
-    atributos = models.OneToOneField(AtributoPersonaje, on_delete=models.CASCADE, verbose_name="Atributos")
-    mazo = models.ForeignKey(Mazo, related_name='cartas_personaje', on_delete=models.CASCADE, verbose_name="Mazo")
+    descripcion = models.CharField(max_length=200, default='Masculino de 32 años, ingeniero...', verbose_name="Descripción")
+    historia = models.TextField(verbose_name="Historia", default='Recien llegado a la ciudad en busca de una aventura.')
+    imagen = models.ImageField(upload_to='personajes/', default='personajes/ejemplo.png', blank=True, null=True, verbose_name="Imagen")
+    dinero = models.IntegerField(
+        default=3600,
+        verbose_name="Dinero",
+        validators=[
+            MinValueValidator(0, message='El dinero no puede ser negativo'),
+            MaxValueValidator(100000, message='Límite máximo: $100.000')
+        ]
+    )
+    karma = models.IntegerField(
+        default=500,
+        verbose_name="Karma",
+        validators=[
+            MinValueValidator(0, message='El karma no puede ser negativo'),
+            MaxValueValidator(1000, message='Límite máximo: 1000')
+        ]
+    )
+    fama = models.IntegerField(
+        default=500,
+        verbose_name="Fama",
+        validators=[
+            MinValueValidator(0, message='La fama no puede ser negativa'),
+            MaxValueValidator(1000, message='Límite máximo: 1000')
+        ]
+    )
+    consignas_juego = models.JSONField(
+        default=list,
+        blank=True,
+        null=True,
+        verbose_name="Consigna del personaje",
+        validators=[
+            MaxLengthValidator(5)
+        ]
+    )
+
+    def agregar_consigna(self, consigna: str):
+        """Agrega una nueva consigna a la lista"""
+        if not self.consignas_juego:
+            self.consignas_juego = []
+        self.consignas_juego.append(consigna.strip())
+
+    # @property
+    # def reglas_formateadas(self) -> list[str]:
+    #     """Devuelve las reglas listas para mostrar en frontend"""
+    #     return [f"• {regla}" for regla in self.atributos_juego] if self.atributos_juego else []
+
+    mazo = models.ForeignKey(Mazo, on_delete=models.PROTECT, null=False, blank=False, related_name='cartas_personaje', verbose_name="Mazo")
     
     class Meta:
         verbose_name = "Carta de personaje"
         verbose_name_plural = "Cartas de personaje"
     
     def __str__(self):
-        return f"{self.nombre} ({self.edad} años)"
+        return f"{self.nombre} \"{self.descripcion}\""
 
 class CartaEspecial(models.Model):
     """
@@ -137,9 +193,17 @@ class CartaEspecial(models.Model):
     """
     titulo = models.CharField(max_length=100, verbose_name="Título")
     frase = models.CharField(max_length=200, verbose_name="Frase")
-    consigna = models.TextField(verbose_name="Consigna")
+    consignas_juego = models.JSONField(
+        default=list,
+        blank=True,
+        null=True,
+        verbose_name="Consignas de Carta Especial",
+        validators=[
+            MaxLengthValidator(5)
+        ]
+    )
     imagen = models.ImageField(upload_to='especiales/', blank=True, null=True, verbose_name="Imagen")
-    mazo = models.ForeignKey(Mazo, related_name='cartas_especiales', on_delete=models.CASCADE, verbose_name="Mazo")
+    mazo = models.ForeignKey(Mazo, related_name='cartas_especiales', on_delete=models.PROTECT, null=False, blank=False, verbose_name="Mazo")
     
     class Meta:
         verbose_name = "Carta especial"

@@ -72,6 +72,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     # Local apps
+    'rest_framework',
+    'corsheaders',
     'cards.apps.CardsConfig',
     'core',
 ]
@@ -79,6 +81,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -176,3 +179,17 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CORS_ORIGIN_WHITELIST = [
+    'https://deckcards.lussocastelli.com',
+    'http://frontend:3300',  # Servicio de frontend en Docker
+    'http://backend:8800',  # Servicio de backend en Docker
+]
+
+CORS_ALLOW_ALL_ORIGINS = True  # Temporal, para facilitar desarrollo
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny'
+    ]
+}

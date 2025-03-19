@@ -6,131 +6,277 @@ import Layout from "@layouts/Layout.astro";
 // import CartaEspecial from "@components/CartaEspecial.astro";
 // import CartaPersonaje from "@components/CartaPersonaje.astro";
 
-// Get the active component from the URL or default to "mazo"
-const activeComponent = Astro.url.searchParams.get("component") || "mazo";
+const selectedMazoId = Astro.url.searchParams.get("mazo");
+const selectedCardType = Astro.url.searchParams.get("type");
+const mazos = await getMazosFromAPI();
 
-// Sample mazos data
-const sampleMazos = [
-    {
-        id: 1,
-        nombre: "Mazo Demo",
-        version: "1.0",
-        fecha_creacion: "2023-01-01",
-    },
-    {
-        id: 2,
-        nombre: "Mazo Avanzado",
-        version: "3.5.1",
-        fecha_creacion: "2023-02-15",
-    },
-    {
-        id: 3,
-        nombre: "Mazo god",
-        version: "2.4.26",
-        fecha_creacion: "2023-02-15",
-    },
-    {
-        id: 4,
-        nombre: "Mazo chido",
-        version: "6-alpha",
-        fecha_creacion: "2023-02-15",
-    },
-];
+// Depuración: Imprimir valores exactos
+console.log("DEBUG: URL completa:", Astro.url.toString());
+console.log("DEBUG: Parámetros crudos:", Astro.url.searchParams.toString());
+console.log(
+    "DEBUG: selectedMazoId:",
+    selectedMazoId,
+    "(tipo:",
+    typeof selectedMazoId,
+    ")",
+);
+console.log(
+    "DEBUG: selectedCardType:",
+    selectedCardType,
+    "(tipo:",
+    typeof selectedCardType,
+    ")",
+);
+
+// Función para obtener las cartas de personaje desde la API según el mazo seleccionado
+async function getCartasPersonajeFromAPI(mazoId: string | null) {
+    try {
+        // Construir la URL dependiendo de si hay un mazo seleccionado
+        let url = `${import.meta.env.API_URL}/api/personajes/`;
+        if (mazoId) {
+            url += `?mazo=${mazoId}`;
+        }
+
+        console.log(`Fetching from URL: ${url}`);
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Error: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log("API Response for cartas personaje:", data);
+        console.log(
+            "Data length:",
+            Array.isArray(data) ? data.length : "Not an array",
+        );
+
+        // TEST: Imprimir todos los objetos completos para verificar la estructura
+        if (Array.isArray(data)) {
+            data.forEach((carta, index) => {
+                console.log(
+                    `Carta ${index + 1}:`,
+                    JSON.stringify(carta, null, 2),
+                );
+            });
+        }
+
+        return data;
+    } catch (error) {
+        console.error("Error al obtener las cartas de personaje:", error);
+        // Si hay un error, devolver un dato de muestra como fallback
+        return [sampleCartaPersonaje];
+    }
+}
+
+// Función para obtener los mazos desde la API
+async function getMazosFromAPI() {
+    try {
+        const response = await fetch(`${import.meta.env.API_URL}/api/mazos/`);
+        if (!response.ok) {
+            throw new Error(`Error: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error al obtener los mazos:", error);
+        // Si hay un error, devolver los datos de muestra como fallback
+        return [
+            {
+                id: 1,
+                nombre: "None",
+                version: "0.0",
+                fecha_creacion: "2024-03-17",
+            },
+        ];
+    }
+}
+// Obtener las cartas de personaje
+let cartasPersonaje = [];
+let testResults = "";
+if (selectedCardType === "carta-personaje") {
+    cartasPersonaje = await getCartasPersonajeFromAPI(selectedMazoId);
+}
+
+// Guardar los resultados para mostrarlos en la página
+if (Array.isArray(cartasPersonaje)) {
+    testResults = JSON.stringify(cartasPersonaje, null, 2);
+}
+
+// To be executed during web build
 
 // Sample business card data
 const sampleCartaNegocio = {
-    titulo: "Café Internet",
-    subtitulo: "Local de servicios digitales",
-    tipo: "Negocio",
-    costo: 5000,
-    beneficio_base: 1000,
-    beneficios_por_turno: [1500, 2500, 4000],
-    niveles_soportados: [{ n_nivel: 1 }, { n_nivel: 2 }, { n_nivel: 3 }],
+    id: 1,
+    nombre: "Café Internet",
+    frase: "Local de servicios digitales",
+    tipo: 1, // ID del TipoDeNegocio
+    precio: 5000,
+    beneficio_base: 5,
+    beneficio_final: 8,
+    consignas_juego: [
+        "Cobras +2 por cada negocio tecnológico que poseas",
+        "Puedes mejorar este negocio por $1000 menos",
+    ],
+    consignas: [
+        "Cobras +2 por cada negocio tecnológico que poseas",
+        "Puedes mejorar este negocio por $1000 menos",
+    ],
+    niveles_soportados: [1, 2, 3], // IDs de los niveles soportados
+    mazo: selectedMazoId || 1,
 };
 
 // Sample special card data
 const sampleCartaEspecial = {
+    id: 1,
     titulo: "Evento Inesperado",
     frase: "La fortuna favorece a los audaces",
-    consigna: "Roba 2 cartas adicionales en tu próximo turno",
+    consignas_juego: [
+        "Roba 2 cartas adicionales en tu próximo turno",
+        "Puedes descartar esta carta para evitar un evento negativo",
+    ],
+    consignas: [
+        "Roba 2 cartas adicionales en tu próximo turno",
+        "Puedes descartar esta carta para evitar un evento negativo",
+    ],
     imagen: "/placeholder-special.jpg",
+    mazo: selectedMazoId || 1,
 };
 
-// Sample character card data
+// Sample personaje card data
 const sampleCartaPersonaje = {
+    id: 1,
     nombre: "Carlos Emprendedor",
+    descripcion: "Visionario de negocios con gran carisma",
     historia:
         "Comenzó desde abajo y ahora es dueño de varios negocios en la ciudad",
-    edad: 42,
-    sexo: "M",
     imagen: "/placeholder-character.jpg",
-    atributos: {
-        karma: 7,
-        dinero: 9,
-        fama: 6,
-    },
+    dinero: 3600,
+    karma: 700,
+    fama: 500,
+    consignas: [
+        "Comienza con +$500 extra",
+        "Puede comprar un negocio extra por turno",
+    ],
+    mazo: selectedMazoId || 1,
 };
+
+// Index of the current Mazo of cards
+let currentCardIndex = 0;
+let maxCardIndex = Array.isArray(cartasPersonaje)
+    ? cartasPersonaje.length - 1
+    : 0;
+// currentCardPersonaje displayed
+let currentCartaPersonaje =
+    cartasPersonaje[currentCardIndex] || sampleCartaPersonaje;
 ---
 
 <Layout>
-    <header
-        class="bg-gradient-to-r from-black to-amber-900 text-white shadow-md px-4 py-1 mb-6 w-full"
-    >
-        <div class="flex flex-wrap my-4 mx-2">
-            <h1 class="text-[min(10vw,50px)] font-bold self-center">
-                DeckCard
-            </h1>
-            <nav class="flex justify-end flex-1 py-4">
-                <a
-                    href="?component=carta-negocio"
-                    class="flex items-center justify-center px-4 h-full rounded-md font-medium transition-colors duration-200 shadow-sm text-white bg-amber-600 hover:bg-amber-500"
-                >
-                    BM
-                </a>
-            </nav>
-        </div>
-    </header>
-    <!-- show personaje card -->
     <section class="w-full max-w-full overflow-hidden py-8">
+        <!-- {/* Zona de prueba para mostrar los datos de la API */}
+        {
+            testResults && (
+                <div class="bg-gray-100 p-4 mb-8 mx-4 overflow-auto max-h-96 border border-gray-300 rounded">
+                    <h2 class="text-xl font-bold mb-2">
+                        Resultados de prueba API
+                    </h2>
+                    <pre class="text-xs">{testResults}</pre>
+                </div>
+            )
+        } -->
+        <!-- Mazo Selector -->
+        <div
+            id="selector-mazo"
+            class={`flex flex-wrap justify-center items-center mb-8 px-4 ${selectedMazoId ? "hidden" : ""}`}
+        >
+            <div class="w-full md:w-1/2">
+                <input
+                    type="text"
+                    placeholder="Buscar mazo..."
+                    class="w-full px-3 py-2 mb-2 bg-gray-100 rounded-xl shadow-md"
+                    id="mazo-search"
+                />
+                <div
+                    class="w-full max-h-[300px] bg-white rounded-xl overflow-y-auto shadow-2xl"
+                >
+                    <ul class="px-6 py-4" id="mazo-list">
+                        {
+                            mazos.map(
+                                (mazo: {
+                                    fecha_creacion: unknown;
+                                    id: number;
+                                    nombre: string;
+                                    version: string;
+                                }) => (
+                                    <li class="py-4 px-2 hover:bg-gray-300 transition-colors duration-200 rounded-xl cursor-pointer">
+                                        <a href={`?mazo=${mazo.id}`}>
+                                            <div class="flex flex-col">
+                                                <div class="flex flex-row">
+                                                    <span class="text-sm sm:text-md md:text-lg lg:text-xl font-bold">
+                                                        {mazo.nombre}
+                                                    </span>
+                                                    <span class="text-sm sm:text-md md:text-lg lg:text-xl">
+                                                        (V{mazo.version})
+                                                    </span>
+                                                </div>
+                                                <span class="text-xs sm:text-sm md:text-md lg:text-lg">
+                                                    {mazo.fecha_creacion}
+                                                </span>
+                                            </div>
+                                        </a>
+                                    </li>
+                                ),
+                            )
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card viewer -->
         <div
             class="flex flex-col lg:flex-row lg:gap-6 items-center mb-8 px-1 sm:px-2 max-w-full"
         >
-            <!-- Filtro de cartas - 1/4 en pantallas grandes, full width en pequeñas -->
+            <!-- Filter -->
             <div
-                class="w-[min(80vw,500px)] lg:max-w-1/4 mb-6 lg:mb-0 lg:justify-left"
+                id="filtro-cartas"
+                class={`w-[min(80vw,500px)] lg:max-w-1/4 mb-6 lg:mb-0 lg:justify-left ${!selectedMazoId ? "hidden" : ""}`}
             >
                 <h3 class="text-lg font-bold py-2">Filtro de cartas</h3>
                 <div
                     class="flex flex-col sm:flex-row xs:flex-wrap lg:flex-col gap-3 sm:gap-4 items-center w-full"
                 >
-                    <a
-                        href="?component=carta-negocio"
-                        class="px-4 py-2 rounded-md font-medium flex items-center justify-center text-center text-sm md:text-md lg:text-xl transition-colors duration-300 text-white bg-amber-600 hover:bg-amber-500 sm:flex-1 lg:flex-1 w-3/4 h-[min(12vw,70px)] truncate"
+                    <button
+                        id="btn-carta-negocio"
+                        data-type="carta-negocio"
+                        class="card-type-btn px-4 py-2 rounded-md font-medium flex items-center justify-center text-center text-sm md:text-md lg:text-xl transition-colors duration-300 text-white bg-amber-600 hover:bg-amber-500 sm:flex-1 lg:flex-1 w-3/4 h-[min(12vw,70px)] truncate ${activeComponent === 'carta-negocio' ? 'bg-amber-700' : ''}"
                     >
                         Cartas de Negocio
-                    </a>
-                    <a
-                        href="?component=carta-especial"
-                        class="px-4 py-2 rounded-md font-medium flex items-center justify-center text-center text-sm md:text-md lg:text-xl transition-colors duration-300 text-white bg-amber-600 hover:bg-amber-500 sm:flex-1 lg:flex-1 w-3/4 h-[min(12vw,70px)] truncate"
+                    </button>
+                    <button
+                        id="btn-carta-especial"
+                        data-type="carta-especial"
+                        class="card-type-btn px-4 py-2 rounded-md font-medium flex items-center justify-center text-center text-sm md:text-md lg:text-xl transition-colors duration-300 text-white bg-amber-600 hover:bg-amber-500 sm:flex-1 lg:flex-1 w-3/4 h-[min(12vw,70px)] truncate ${activeComponent === 'carta-especial' ? 'bg-amber-700' : ''}"
                     >
                         Cartas Especiales
-                    </a>
-                    <a
-                        href="?component=carta-personaje"
-                        class="px-4 py-2 rounded-md font-medium flex items-center justify-center text-center text-sm md:text-md lg:text-xl transition-colors duration-300 text-white bg-amber-600 hover:bg-amber-500 sm:flex-1 lg:flex-1 w-3/4 h-[min(12vw,70px)] truncate"
+                    </button>
+                    <button
+                        id="btn-carta-personaje"
+                        data-type="carta-personaje"
+                        class="card-type-btn px-4 py-2 rounded-md font-medium flex items-center justify-center text-center text-sm md:text-md lg:text-xl transition-colors duration-300 text-white bg-amber-600 hover:bg-amber-500 sm:flex-1 lg:flex-1 w-3/4 h-[min(12vw,70px)] truncate ${activeComponent === 'carta-personaje' ? 'bg-amber-700' : ''}"
                     >
                         Cartas de Personaje
-                    </a>
+                    </button>
                 </div>
             </div>
 
-            <!-- Contenido de la carta - 3/4 en pantallas grandes, full width en pequeñas -->
+            <!-- Card -->
             <div
-                class="max-w-xs sm:max-w-md md:max-w-lg lg:max-w-full lg:justify-right rounded-3xl border-gray-500 border-l-1 border-b-2 border-t-3 border-r-3 shadow-xl relative"
+                id="contenido-carta"
+                class={`max-w-xs sm:max-w-md md:max-w-lg lg:max-w-full lg:justify-right rounded-3xl border-gray-500 border-l-1 border-b-2 border-t-3 border-r-3 shadow-xl relative ${!selectedMazoId ? "hidden" : ""}`}
             >
+                <!-- Card controls -->
                 <div class="static">
-                    <div
-                        class="absolute top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-400 hover:bg-gray-300 transition-colors duration-100 cursor-pointer font-bold text-gray-100 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center z-10"
+                    <button
+                        id="next-card-btn"
+                        class="absolute opacity-50 cursor-not-allowed top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-400 hover:bg-gray-300 transition-colors duration-100 font-bold text-gray-100 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center z-10"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -145,9 +291,10 @@ const sampleCartaPersonaje = {
                                 stroke-width="2"
                                 d="M9 5l7 7-7 7"></path>
                         </svg>
-                    </div>
-                    <div
-                        class="absolute top-1/2 left-0 transform -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-400 hover:bg-gray-300 transition-colors duration-100 cursor-pointer font-bold text-gray-100 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center z-10"
+                    </button>
+                    <button
+                        id="prev-card-btn"
+                        class="absolute opacity-50 cursor-not-allowed top-1/2 left-0 transform -translate-x-1/2 -translate-y-1/2 rounded-full bg-gray-400 hover:bg-gray-300 transition-colors duration-100 font-bold text-gray-100 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center z-10"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -162,8 +309,9 @@ const sampleCartaPersonaje = {
                                 stroke-width="2"
                                 d="M15 5l-7 7 7 7"></path>
                         </svg>
-                    </div>
+                    </button>
                 </div>
+                <!-- Card content -->
                 <div class="p-4">
                     <h2 class="text-2xl font-bold mb-4">Personaje</h2>
                     <div class="flex justify-center flex-col lg:flex-row gap-6">
@@ -176,11 +324,17 @@ const sampleCartaPersonaje = {
                                 class="w-[min(30vw,600px)] h-[min(30vw,300px)] rounded-3xl shadow-md"
                             />
                             <div class="text-center md:text-left">
-                                <h3 class="text-lg font-bold">
-                                    {sampleCartaPersonaje.nombre}
+                                <h3
+                                    class="text-lg font-bold"
+                                    id="personajeNombre"
+                                >
+                                    {currentCartaPersonaje.nombre}
                                 </h3>
-                                <p class="text-sm text-gray-600">
-                                    {sampleCartaPersonaje.historia}
+                                <p
+                                    class="text-sm text-gray-600"
+                                    id="personajeDescripcion"
+                                >
+                                    {currentCartaPersonaje.descripcion}
                                 </p>
                             </div>
                         </div>
@@ -189,13 +343,24 @@ const sampleCartaPersonaje = {
                         >
                             <div class="text-center md:text-left">
                                 <h3 class="text-md text-center font-bold">
-                                    Características y Atributos
+                                    Historia
                                 </h3>
-                                <p class="text-md text-justify text-gray-800">
-                                    {sampleCartaPersonaje.historia}
+                                <p
+                                    class="text-md text-justify text-gray-800"
+                                    id="personajeHistoria"
+                                >
+                                    {currentCartaPersonaje.historia}
+                                </p>
+                                <h3 class="text-md text-center font-bold">
+                                    Consignas/Atributos
+                                </h3>
+                                <p
+                                    class="text-md text-justify text-gray-800"
+                                    id="personajeConsignas"
+                                >
+                                    {currentCartaPersonaje.consignas}
                                 </p>
                             </div>
-
                             <div
                                 class="grid grid-cols-3 justify-center md:items-start"
                             >
@@ -205,11 +370,11 @@ const sampleCartaPersonaje = {
                                     <div
                                         class="bg-blue-400 rounded-full w-1/3 my-2 p-2 font-bold text-center text-xs sm:text-md md:text-lg lg:text-xl"
                                     >
-                                        <p class="flex justify-center">
-                                            {
-                                                sampleCartaPersonaje.atributos
-                                                    .karma
-                                            }
+                                        <p
+                                            class="flex justify-center"
+                                            id="personajeKarma"
+                                        >
+                                            {currentCartaPersonaje.karma}
                                         </p>
                                     </div>
                                     <dt
@@ -224,11 +389,11 @@ const sampleCartaPersonaje = {
                                     <div
                                         class="bg-green-600 rounded-full w-1/3 my-2 p-2 font-bold text-center text-xs sm:text-md md:text-lg lg:text-xl"
                                     >
-                                        <p class="flex justify-center">
-                                            {
-                                                sampleCartaPersonaje.atributos
-                                                    .dinero
-                                            }
+                                        <p
+                                            class="flex justify-center"
+                                            id="personajeDinero"
+                                        >
+                                            {currentCartaPersonaje.dinero}
                                         </p>
                                     </div>
                                     <dt
@@ -243,11 +408,11 @@ const sampleCartaPersonaje = {
                                     <div
                                         class="bg-amber-500 rounded-full w-1/3 my-2 p-2 font-bold text-center text-xs sm:text-md md:text-lg lg:text-xl"
                                     >
-                                        <p class="flex justify-center">
-                                            {
-                                                sampleCartaPersonaje.atributos
-                                                    .fama
-                                            }
+                                        <p
+                                            class="flex justify-center"
+                                            id="personajeFama"
+                                        >
+                                            {currentCartaPersonaje.fama}
                                         </p>
                                     </div>
                                     <dt
@@ -262,31 +427,12 @@ const sampleCartaPersonaje = {
                 </div>
             </div>
         </div>
-        <div class="flex flex-wrap justify-center items-center mb-8 px-4">
-            <div class="w-1/2">
-                <input
-                    type="text"
-                    placeholder="Buscar mazo..."
-                    class="w-full px-3 py-2 mb-2 bg-gray-100 rounded-xl shadow-md"
-                    id="mazo-search"
-                />
-                <div
-                    class="w-full max-h-[300px] bg-white rounded-xl overflow-y-auto shadow-2xl"
-                >
-                    <ul class="px-6 py-4" id="mazo-list">
-                        {
-                            sampleMazos.map((mazo) => (
-                                <li class="py-4 px-2 hover:bg-gray-300 transition-colors duration-200 rounded-xl cursor-pointer">
-                                    {mazo.nombre} (v{mazo.version})
-                                </li>
-                            ))
-                        }
-                    </ul>
-                </div>
-            </div>
-        </div>
+        <!-- Card -->
+
+        <!-- Mazo Controls -->
         <div
-            class="flex flex-row justify-center items-center gap-2 px-2 sm:px-6 max-w-full md:max-w-[50%] lg:max-w-[30%] mx-auto"
+            id="controles-mazo"
+            class={`flex flex-row justify-center items-center gap-2 px-2 sm:px-6 max-w-full md:max-w-[50%] lg:max-w-[30%] mx-auto ${!selectedMazoId ? "hidden" : ""}`}
         >
             <button
                 id="shuffle-btn"
@@ -299,9 +445,13 @@ const sampleCartaPersonaje = {
                 class="flex flex-col justify-center w-1/3 items-center bg-gray-200 rounded-lg p-2 gap-2"
             >
                 <div class="flex flex-row justify-between items-center">
-                    <span class="text-xl font-bold">2 </span>
+                    <span class="text-xl font-bold" id="cardIndex"
+                        >{currentCardIndex + 1}</span
+                    >
                     <span class="text-xl font-bold"> / </span>
-                    <span class="text-xl font-bold"> 40</span>
+                    <span class="text-xl font-bold" id="maxCardIndex"
+                        >{maxCardIndex + 1}</span
+                    >
                 </div>
                 <div class="flex flex-row justify-between items-center">
                     <span class="text-xs">Vistas </span>
@@ -319,27 +469,181 @@ const sampleCartaPersonaje = {
     </section>
 </Layout>
 
-<script>
+<script define:vars={{ cartasPersonaje, currentCardIndex, maxCardIndex }}>
     // Client-side interactive functionality
     document.addEventListener("DOMContentLoaded", () => {
-        // Shuffle button functionality
+        const mazoSearch = document.getElementById("mazo-search");
+        const mazoList = document.getElementById("mazo-list");
         const shuffleBtn = document.getElementById("shuffle-btn");
-        if (shuffleBtn) {
-            shuffleBtn.addEventListener("click", () => {
-                console.log("Shuffling deck...");
-                // Implementation for shuffling deck would go here
-                alert("Mazo mezclado!");
-            });
+        const nextCardBtn = document.getElementById("next-card-btn");
+        const prevCardBtn = document.getElementById("prev-card-btn");
+
+        // Establecer variables locales para manejar los índices
+        let localCurrentIndex = currentCardIndex;
+        let localMaxIndex = maxCardIndex;
+
+        // Hacer visible el botones de navegación si hay más de una carta
+        if (localMaxIndex > 1) {
+            nextCardBtn.classList.remove("opacity-50", "cursor-not-allowed");
+            nextCardBtn.classList.add("cursor-pointer");
+            prevCardBtn.classList.remove("opacity-50", "cursor-not-allowed");
+            prevCardBtn.classList.add("cursor-pointer");
         }
 
-        // Next card button functionality
-        const nextCardBtn = document.getElementById("next-card-btn");
-        if (nextCardBtn) {
-            nextCardBtn.addEventListener("click", () => {
-                console.log("Drawing next card...");
-                // Implementation for drawing next card would go here
-                alert("Tomando siguiente carta...");
+        // Función para actualizar la visualización de la carta actual
+        function updateCardDisplay() {
+            const currentCard = cartasPersonaje[localCurrentIndex];
+            if (!currentCard) return; // Evitar errores si no hay cartas disponibles
+
+            // Actualizar el nombre del personaje
+            const nombreElement = document.getElementById("personajeNombre");
+            if (nombreElement) {
+                nombreElement.textContent = currentCard.nombre;
+            }
+            // Actualizar la historia del personaje
+            const historiaElement =
+                document.getElementById("personajeHistoria");
+            if (historiaElement) {
+                historiaElement.textContent = currentCard.historia;
+            }
+
+            // Actualizar los atributos
+            const karmaElement = document.getElementById("personajeKarma");
+            if (karmaElement) {
+                karmaElement.textContent = currentCard.karma.toString();
+            }
+
+            const dineroElement = document.getElementById("personajeDinero");
+            if (dineroElement) {
+                dineroElement.textContent = currentCard.dinero.toString();
+            }
+
+            const famaElement = document.getElementById("personajeFama");
+            if (famaElement) {
+                famaElement.textContent = currentCard.fama.toString();
+            }
+
+            const cardIndexElement = document.getElementById("cardIndex");
+            if (cardIndexElement) {
+                cardIndexElement.textContent = localCurrentIndex + 1;
+            }
+
+            const maxCardIndexElement = document.getElementById("maxCardIndex");
+            if (maxCardIndexElement) {
+                maxCardIndexElement.textContent = localMaxIndex + 1;
+            }
+        }
+
+        // Configurar botones de navegación si estamos en la vista de cartas de personaje
+        const urlParams = new URLSearchParams(window.location.search);
+        const activeComponent = urlParams.get("type");
+
+        // if (
+        //     activeComponent === "carta-personaje" &&
+        //     cartasPersonaje &&
+        //     cartasPersonaje.length > 0
+        // ) {
+        // Inicializar la visualización de la primera carta
+        updateCardDisplay();
+
+        // No hay suficientes cartas para navegar
+        if (localMaxIndex > 0) {
+            // Configurar el botón siguiente
+            if (nextCardBtn) {
+                nextCardBtn.addEventListener("click", () => {
+                    localCurrentIndex =
+                        (localCurrentIndex + 1) % (localMaxIndex + 1);
+                    updateCardDisplay();
+                });
+            }
+
+            // Configurar el botón anterior
+            if (prevCardBtn) {
+                prevCardBtn.addEventListener("click", () => {
+                    localCurrentIndex =
+                        (localCurrentIndex - 1 + localMaxIndex + 1) %
+                        (localMaxIndex + 1);
+                    updateCardDisplay();
+                });
+            }
+        }
+
+        // Manejo de botones de tipo de carta
+        const cardTypeButtons = document.querySelectorAll(".card-type-btn");
+
+        cardTypeButtons.forEach((button) => {
+            button.addEventListener("click", (e) => {
+                const target = e.currentTarget;
+                const cardType = target.getAttribute("data-type");
+
+                // Obtener parámetros actuales
+                const url = new URL(window.location.href);
+                const params = url.searchParams;
+
+                // Mantener el parámetro mazo y agregar/actualizar el tipo
+                const mazoId = params.get("mazo");
+
+                // Construir nueva URL
+                const newParams = new URLSearchParams();
+                if (mazoId) {
+                    newParams.set("mazo", mazoId);
+                }
+                if (cardType) {
+                    newParams.set("type", cardType);
+                }
+
+                // Navegar a la nueva URL
+                window.location.href = `?${newParams.toString()}`;
+            });
+        });
+
+        // Escuchar cambios en el campo de búsqueda para filtrar mazos
+        if (mazoSearch) {
+            mazoSearch.addEventListener("input", function () {
+                if (!mazoList) return;
+
+                const searchValue = this.value.toLowerCase();
+                const mazos = mazoList.querySelectorAll("li");
+
+                mazos.forEach((mazo) => {
+                    const mazoText = mazo.textContent?.toLowerCase() || "";
+                    if (mazoText.includes(searchValue)) {
+                        mazo.style.display = "";
+                    } else {
+                        mazo.style.display = "none";
+                    }
+                });
             });
         }
+        // Función para manejar la visibilidad basada en la URL
+        function handleVisibilityBasedOnURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const selectedMazoId = urlParams.get("mazo");
+
+            const filtroCartas = document.getElementById("filtro-cartas");
+            const contenidoCarta = document.getElementById("contenido-carta");
+            const selectorMazo = document.getElementById("selector-mazo");
+            const controlesMazo = document.getElementById("controles-mazo");
+
+            if (selectedMazoId) {
+                // Si hay un mazo seleccionado
+                filtroCartas?.classList.remove("hidden");
+                contenidoCarta?.classList.remove("hidden");
+                selectorMazo?.classList.add("hidden");
+                controlesMazo?.classList.remove("hidden");
+            } else {
+                // Si no hay un mazo seleccionado
+                filtroCartas?.classList.add("hidden");
+                contenidoCarta?.classList.add("hidden");
+                selectorMazo?.classList.remove("hidden");
+                controlesMazo?.classList.add("hidden");
+            }
+        }
+
+        // Handle when user navigates back with browser buttons
+        window.addEventListener("popstate", handleVisibilityBasedOnURL);
+
+        // Verificación inicial de visibilidad
+        handleVisibilityBasedOnURL();
     });
 </script>
