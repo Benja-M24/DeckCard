@@ -1,0 +1,81 @@
+---
+import type { CartaNegocio } from "@utils/ApiService";
+
+interface Props {
+  carta: CartaNegocio;
+}
+
+const { carta } = Astro.props;
+---
+
+<div class="carta-negocio">
+  <div class="p-4">
+    <h2 class="text-2xl font-bold mb-4 text-amber-600">{carta.nombre}</h2>
+    <div class="flex justify-center flex-col lg:flex-row gap-6">
+      <div class="flex-1 flex flex-col items-center">
+        <div class="bg-amber-100 p-4 rounded-lg shadow-md w-full max-w-xs mb-4">
+          <div class="border-2 border-amber-600 p-6 rounded-md">
+            <h3 class="text-xl font-semibold mb-2 text-center">
+              {carta.nombre}
+            </h3>
+            <p class="text-sm mb-4 italic text-center">❝{carta.frase}❞</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex-1 flex flex-col gap-3">
+        <div class="text-center md:text-left">
+          <h3 class="text-md text-center font-bold">Información</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+            <div class="bg-amber-50 p-3 rounded-md shadow-sm">
+              <p class="text-sm font-semibold">
+                Tipo: <span class="font-normal">{carta.tipo}</span>
+              </p>
+            </div>
+            <div class="bg-amber-50 p-3 rounded-md shadow-sm">
+              <p class="text-sm font-semibold">
+                Precio: <span class="font-normal">${carta.precio}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="mt-2">
+          <h3 class="text-md text-center font-bold mb-1">Beneficios</h3>
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="text-center bg-green-50 p-2 rounded-md">
+              <span class="block text-xl font-bold text-green-600">
+                ${carta.beneficio_base}
+              </span>
+              <span class="text-sm text-gray-600">Base</span>
+            </div>
+            <div class="text-center bg-green-50 p-2 rounded-md">
+              <span class="block text-xl font-bold text-green-600">
+                ${carta.beneficio_final}
+              </span>
+              <span class="text-sm text-gray-600">Final</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-2">
+          <h3 class="text-md text-center font-bold mb-1">Niveles Soportados</h3>
+          <div class="flex flex-wrap justify-center gap-2">
+            {
+              carta.niveles_soportados.map((nivel) => (
+                <span class="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm">
+                  {nivel}
+                </span>
+              ))
+            }
+          </div>
+        </div>
+        <div>
+          <h3 class="text-md text-center font-bold mb-1">Consignas de Juego</h3>
+          <ul
+            class="list-disc pl-5 text-sm text-gray-700 bg-gray-50 p-2 rounded-md"
+          >
+            {carta.consignas_juego.map((consigna) => <li>{consigna}</li>)}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

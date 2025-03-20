@@ -1,0 +1,67 @@
+---
+import type { CartaPersonaje } from "@utils/ApiService";
+
+interface Props {
+  carta: CartaPersonaje;
+}
+
+const { carta } = Astro.props;
+---
+
+<div id="card-personaje" class="p-2 lg:p-4">
+  <h2 class="text-2xl font-bold mb-4">Personaje</h2>
+  <div class="flex justify-center flex-col lg:flex-row gap-6">
+    <div class="flex flex-col items-center w-3/8 lg:items-start gap-2">
+      <img
+        src={carta.imagen}
+        alt={carta.nombre}
+        class="object-cover r border-4 border-amber-600 shadow-lg mb-2"
+      />
+      <h3 class="text-xl font-bold">{carta.nombre}</h3>
+      <p class="text-gray-600 max-w-sm text-center lg:text-left">
+        {carta.descripcion}
+      </p>
+    </div>
+    <div class="flex flex-col gap-3">
+      <div class="text-center md:text-left">
+        <h3 class="text-md text-center font-bold">Historia</h3>
+        <p class="text-sm max-w-md">
+          {carta.historia}
+        </p>
+      </div>
+      <div class="mt-2">
+        <h3 class="text-md text-center font-bold mb-1">Atributos</h3>
+        <div class="grid grid-cols-3 gap-4 mb-4">
+          <div class="text-center">
+            <span class="block text-xl font-bold text-amber-600">
+              ${carta.dinero.toLocaleString()}
+            </span>
+            <span class="text-xs text-gray-600">Dinero</span>
+          </div>
+          <div class="text-center">
+            <span class="block text-xl font-bold text-amber-600">
+              {carta.karma}
+            </span>
+            <span class="text-xs text-gray-600">Karma</span>
+          </div>
+          <div class="text-center">
+            <span class="block text-xl font-bold text-amber-600">
+              {carta.fama}
+            </span>
+            <span class="text-xs text-gray-600">Fama</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 class="text-md text-center font-bold mb-1">Habilidades</h3>
+        <ul class="list-disc pl-5 text-sm">
+          {
+            carta.consignas_juego.map((consignas_juego) => (
+              <li>{consignas_juego}</li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,75 @@
+---
+interface Props {
+  selectedMazoId: string | null;
+  selectedCardType: string | null;
+}
+
+const { selectedMazoId, selectedCardType } = Astro.props;
+---
+
+<div
+  id="filtro-cartas"
+  class={`flex flex-col w-[min(80vw,500px)] mb-6 lg:mb-0 lg:justify-left ${!selectedMazoId ? "hidden" : ""} ${!selectedCardType ? "" : "lg:w-1/4"}`}
+>
+  <h3 class="text-lg font-bold py-2">Filtro de cartas</h3>
+  <div
+    class="flex flex-col sm:flex-row xs:flex-wrap lg:flex-col gap-3 sm:gap-4 items-center w-full"
+  >
+    <button
+      data-type="carta-personaje"
+      class={`flex items-center justify-center px-4 py-2
+    sm:flex-1 sm:w-full lg:flex-1 lg:w-3/4 h-[min(12vw,70px)]
+    rounded-md shadow-sm
+    text-white text-center text-md md:text-lg lg:text-2xl 
+    hover:bg-amber-600
+    ${selectedCardType === "carta-personaje" ? "bg-amber-700" : "bg-amber-500"}`}
+    >
+      Cartas de Personajes
+    </button>
+    <button
+      data-type="carta-negocio"
+      class={`flex items-center justify-center px-4 py-2
+    sm:flex-1 sm:w-full lg:flex-1 lg:w-3/4 h-[min(12vw,70px)]
+    rounded-md shadow-sm
+    text-white text-center text-md md:text-lg lg:text-2xl 
+    hover:bg-amber-600
+    ${selectedCardType === "carta-negocio" ? "bg-amber-700" : "bg-amber-500"}`}
+    >
+      Cartas de Negocio
+    </button>
+    <button
+      data-type="carta-especial"
+      class={`flex items-center justify-center px-4 py-2
+    sm:flex-1 sm:w-full lg:flex-1 lg:w-3/4 h-[min(12vw,70px)]
+    rounded-md shadow-sm
+    text-white text-center text-md md:text-lg lg:text-2xl 
+    hover:bg-amber-600
+    ${selectedCardType === "carta-especial" ? "bg-amber-700" : "bg-amber-500"}`}
+    >
+      Cartas Especiales
+    </button>
+  </div>
+</div>
+
+<script>
+  // Client-side functionality for card type filter
+  document.addEventListener("DOMContentLoaded", () => {
+    const cardTypeButtons = document.querySelectorAll(
+      "#filtro-cartas button[data-type]",
+    );
+
+    cardTypeButtons.forEach((button) => {
+      button.addEventListener("click", (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const cardType = target.getAttribute("data-type");
+        const currentUrl = new URL(window.location.href);
+
+        // Mantener el mazo seleccionado y actualizar el tipo de carta
+        if (cardType) {
+          currentUrl.searchParams.set("type", cardType);
+          window.location.href = currentUrl.toString();
+        }
+      });
+    });
+  });
+</script>

@@ -1,0 +1,94 @@
+---
+interface Props {
+  currentCardIndex: number;
+  maxCardIndex: number;
+}
+
+const { currentCardIndex, maxCardIndex } = Astro.props;
+---
+
+<div class="static">
+  <button
+    id="next-card-btn"
+    class="absolute right-[-20px] top-1/2 transform -translate-y-1/2 bg-gray-400 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg hover:bg-gray-300 transition-colors duration-200"
+    disabled={maxCardIndex <= 0}
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      class="w-6 h-6"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M9 5l7 7-7 7"></path>
+    </svg>
+  </button>
+  <button
+    id="prev-card-btn"
+    class="absolute left-[-20px] top-1/2 transform -translate-y-1/2 bg-gray-400 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg hover:bg-gray-300 transition-colors duration-200"
+    disabled={maxCardIndex <= 0}
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      class="w-6 h-6"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M15 19l-7-7 7-7"></path>
+    </svg>
+  </button>
+</div>
+
+<script>
+  // Client-side functionality for card navigation
+  document.addEventListener("DOMContentLoaded", () => {
+    const nextCardBtn = document.getElementById("next-card-btn");
+    const prevCardBtn = document.getElementById("prev-card-btn");
+
+    if (nextCardBtn && prevCardBtn) {
+      // Avanzar a la siguiente carta
+      nextCardBtn.addEventListener("click", () => {
+        const currentUrl = new URL(window.location.href);
+        const currentIndex = parseInt(
+          currentUrl.searchParams.get("cardIndex") || "0",
+        );
+        const maxIndex = parseInt(
+          nextCardBtn.getAttribute("data-max-index") || "0",
+        );
+
+        if (currentIndex < maxIndex) {
+          currentUrl.searchParams.set(
+            "cardIndex",
+            (currentIndex + 1).toString(),
+          );
+          window.location.href = currentUrl.toString();
+        }
+      });
+
+      // Retroceder a la carta anterior
+      prevCardBtn.addEventListener("click", () => {
+        const currentUrl = new URL(window.location.href);
+        const currentIndex = parseInt(
+          currentUrl.searchParams.get("cardIndex") || "0",
+        );
+
+        if (currentIndex > 0) {
+          currentUrl.searchParams.set(
+            "cardIndex",
+            (currentIndex - 1).toString(),
+          );
+          window.location.href = currentUrl.toString();
+        }
+      });
+    }
+  });
+</script>

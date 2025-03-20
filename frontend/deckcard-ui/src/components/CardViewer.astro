@@ -1,0 +1,84 @@
+---
+import CardControls from "./CardControls.astro";
+import CartaNegocio from "./CartaNegocio.astro";
+import CartaEspecial from "./CartaEspecial.astro";
+import CartaPersonaje from "./CartaPersonaje.astro";
+import type { CartaPersonaje as CartaPersonajeType, CartaNegocio as CartaNegocioType, CartaEspecial as CartaEspecialType } from "@utils/ApiService";
+
+interface Props {
+  selectedMazoId: string | null;
+  selectedCardType: string | null;
+  cartas: any[];
+  currentCardIndex: number;
+}
+
+const { selectedMazoId, selectedCardType, cartas, currentCardIndex } = Astro.props;
+const currentCarta = cartas[currentCardIndex];
+const maxCardIndex = cartas.length - 1;
+
+// Funciones para verificar el tipo de carta (type guards)
+function isCartaPersonaje(carta: any): carta is CartaPersonajeType {
+  return carta && 'nombre' in carta && 'historia' in carta && 'dinero' in carta && 'karma' in carta && 'fama' in carta;
+}
+
+function isCartaNegocio(carta: any): carta is CartaNegocioType {
+  return carta && 'nombre' in carta && 'frase' in carta && 'tipo' in carta && 'precio' in carta;
+}
+
+function isCartaEspecial(carta: any): carta is CartaEspecialType {
+  return carta && 'titulo' in carta && 'frase' in carta && !('dinero' in carta) && !('tipo' in carta);
+}
+
+// Determinar el tipo de la carta actual basado en sus propiedades y el tipo seleccionado
+let shouldRenderPersonaje = selectedCardType === "carta-personaje" && isCartaPersonaje(currentCarta);
+let shouldRenderNegocio = selectedCardType === "carta-negocio" && isCartaNegocio(currentCarta);
+let shouldRenderEspecial = selectedCardType === "carta-especial" && isCartaEspecial(currentCarta);
+---
+
+<div
+  id="card-viewer"
+  class={`flex justify-center mt-4
+  ${!selectedMazoId || !selectedCardType ? "hidden" : ""}
+  ${!selectedCardType ? "" : "lg:w-3/4"}
+  `}
+>
+  <div class="relative bg-white p-2 rounded-xl shadow-2xl w-[min(90vw,600px)] max-w-xs sm:max-w-md md:max-w-lg lg:max-w-full lg:justify-right rounded-3xl border-gray-500 border-l-1 border-b-2 border-t-3 border-r-3 shadow-xl">
+    {/* Mostrar la carta según su tipo, usando type guards para asegurar compatibilidad */}
+    {shouldRenderPersonaje && (
+      <CartaPersonaje carta={currentCarta as CartaPersonajeType} />
+    )}
+    {shouldRenderNegocio && (
+      <CartaNegocio carta={currentCarta as CartaNegocioType} />
+    )}
+    {shouldRenderEspecial && (
+      <CartaEspecial carta={currentCarta as CartaEspecialType} />
+    )}
+
+    {
+      maxCardIndex > 0 && (
+        <CardControls
+          currentCardIndex={currentCardIndex}
+          maxCardIndex={maxCardIndex}
+        />
+      )
+    }
+  </div>
+</div>
+
+<script define:vars={{ currentCardIndex, maxCardIndex }}>
+  // Agregar información del índice máximo a los botones de navegación
+  document.addEventListener("DOMContentLoaded", () => {
+    const nextBtn = document.getElementById("next-card-btn");
+    const prevBtn = document.getElementById("prev-card-btn");
+
+    if (nextBtn) {
+      nextBtn.setAttribute("data-max-index", maxCardIndex.toString());
+    }
+
+    // Habilitar/deshabilitar botones según el índice actual
+    if (nextBtn && prevBtn) {
+      nextBtn.disabled = currentCardIndex >= maxCardIndex;
+      prevBtn.disabled = currentCardIndex <= 0;
+    }
+  });
+</script>

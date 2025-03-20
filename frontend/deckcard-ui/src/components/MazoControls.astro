@@ -1,0 +1,49 @@
+---
+interface Props {
+  selectedMazoId: string | null;
+  selectedCardType: string | null;
+  currentCardIndex: number;
+  maxCardIndex: number;
+}
+
+const { selectedMazoId, selectedCardType, currentCardIndex, maxCardIndex } =
+  Astro.props;
+---
+
+<div
+  class={`flex flex-row justify-center items-center gap-2 px-2 sm:px-6 max-w-full md:max-w-[50%] lg:max-w-[30%] mx-auto
+  ${!selectedMazoId ? "hidden" : ""}
+  ${!selectedCardType ? "hidden" : ""}
+  `}
+>
+  <button
+    id="shuffle-btn"
+    class="flex items-center justify-center px-4 py-2 w-1/3 rounded-md font-medium transition-colors duration-300 shadow-sm text-white bg-amber-600 hover:bg-amber-500"
+  >
+    Mezclar Mazo
+  </button>
+
+  <div
+    class="flex flex-col justify-center w-1/3 items-center bg-gray-200 rounded-lg p-2 gap-2"
+  >
+    <div class="flex flex-row justify-between items-center">
+      <span class="text-xl font-bold" id="cardIndex"
+        >{currentCardIndex + 1}</span
+      >
+      <span class="text-xl font-bold px-4 justify-center"> / </span>
+      <span class="text-xl font-bold" id="maxCardIndex">{maxCardIndex + 1}</span
+      >
+    </div>
+    <div class="flex flex-row justify-between items-center">
+      <span class="text-xs">Vistas</span>
+      <span class="text-sm font-bold px-2 justify-center"> / </span>
+      <span class="text-xs">Restantes</span>
+    </div>
+  </div>
+  <button
+    id="presentation-btn"
+    class="flex items-center justify-center px-4 py-2 w-1/3 rounded-md font-medium transition-colors duration-300 shadow-sm text-white bg-amber-600 hover:bg-amber-500"
+  >
+    Modo Presentación
+  </button>
+</div>
