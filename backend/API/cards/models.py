@@ -2,6 +2,8 @@ from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator, MaxLengthValidator
 import json
+import secrets
+import string
 
 class Mazo(models.Model):
     """
@@ -211,3 +213,117 @@ class CartaEspecial(models.Model):
     
     def __str__(self):
         return self.titulo
+
+
+def generate_room_code():
+    """
+    Genera un código hexadecimal único de 6 caracteres para la sala.
+    """
+    characters = string.ascii_uppercase + string.digits
+    while True:
+        # Generar código hexadecimal aleatorio de 6 caracteres
+        code = ''.join(secrets.choice(characters) for _ in range(6))
+        # Verificar que no exista una sala con este código
+        if not Room.objects.filter(code=code).exists():
+            return code
+
+
+class Room(models.Model):
+    """
+    Modelo para representar una sala de juego.
+    """
+    STATUS_CHOICES = [
+        ('created', 'Creada'),
+        ('waiting', 'Esperando jugadores'),
+        ('in_progress', 'En progreso'),
+        ('finished', 'Finalizada'),
+    ]
+    
+    # Código único hexadecimal de 6 caracteres para la sala
+    code = models.CharField(max_length=6, unique=True, default=generate_room_code, verbose_name="Código de sala")
+    name = models.CharField(max_length=100, verbose_name="Nombre de la sala")
+    max_participants = models.PositiveIntegerField(default=6, validators=[MinValueValidator(2), MaxValueValidator(10)], verbose_name="Máximo de participantes")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='created', verbose_name="Estado")
+    fecha_creacion = models.DateTimeField(default=timezone.now, verbose_name="Fecha de creación")
+    mazo = models.ForeignKey(Mazo, on_delete=models.PROTECT, related_name='rooms', verbose_name="Mazo")
+    
+    class Meta:
+        verbose_name = "Sala"
+        verbose_name_plural = "Salas"
+        ordering = ['-fecha_creacion']
+    
+    def __str__(self):
+        return f"{self.name} #{self.code}"
+    
+    @property
+    def participants_count(self):
+        return self.participants.count()
+    
+    @property
+    def is_full(self):
+        return self.participants_count >= self.max_participants
+    
+    @property
+    def is_started(self):
+        return self.status == 'in_progress'
+    
+    @property
+    def is_finished(self):
+        return self.status == 'finished'
+    # Borra el registro si la sala está finalizada y tiene más de un día de antigüedad
+    def clean(self):
+        if self.status == 'finished' and (timezone.now() - self.fecha_creacion).days > 1:
+            self.delete()
+
+class Participant(models.Model):
+    """
+    Modelo para representar un participante en una sala de juego.
+    """
+    ROLE_CHOICES = [
+        ('admin', 'Administrador'),
+        ('player', 'Jugador'),
+    ]
+    
+    name = models.CharField(max_length=100, verbose_name="Nombre")
+    admin = models.BooleanField(default=False, verbose_name="Administrador")
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='jugadores', verbose_name="Sala")
+    carta_personaje = models.ManyToManyField(CartaPersonaje, related_name='jugadores', verbose_name="Carta de personaje")
+    cartas_negocios = models.ManyToManyField(CartaNegocio, related_name='jugadores', verbose_name="Cartas de negocio")
+    cartas_especiales = models.ManyToManyField(CartaEspecial, related_name='jugadores', verbose_name="Carta especial")
+    dinero = models.IntegerField(
+        default=0,
+        verbose_name="Dinero",
+        validators=[
+            MinValueValidator(0, message='El dinero no puede ser negativo'),
+            MaxValueValidator(100000, message='Límite máximo: $100.000')
+        ]
+    )
+    karma = models.IntegerField(
+        default=0,
+        verbose_name="Karma",
+        validators=[
+            MinValueValidator(0, message='El karma no puede ser negativo'),
+            MaxValueValidator(1000, message='Límite máximo: 1000')
+        ]
+    )
+    fama = models.IntegerField(
+        default=0,
+        verbose_name="Fama",
+        validators=[
+            MinValueValidator(0, message='La fama no puede ser negativa'),
+            MaxValueValidator(1000, message='Límite máximo: 1000')
+        ]
+    )
+    extra_data = models.JSONField(default=dict, blank=True, null=True, verbose_name="Datos adicionales")
+    fecha_ingreso = models.DateTimeField(default=timezone.now, verbose_name="Fecha de ingreso")
+    
+    class Meta:
+        verbose_name = "Participante"
+        verbose_name_plural = "Participantes"
+        ordering = ['fecha_ingreso']
+        # Garantiza que no haya participantes duplicados en una misma sala
+        unique_together = ['name', 'room']
+    
+    def __str__(self):
+        return f"{self.name} ({self.room.code})"
+

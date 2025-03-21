@@ -43,6 +43,24 @@ export interface CartaEspecial {
   mazo: number;
 }
 
+export interface Room {
+  id: number;
+  name: string;
+  participants: number;
+  status: string;
+  fecha_creacion: string;
+  mazo: number;
+}
+
+export interface Participant {
+  id: number;
+  name: string;
+  admin: boolean;
+  dinero: number;
+  karma: number;
+  fama: number;
+}
+
 // Datos de muestra como fallback
 export const sampleCartaPersonaje: CartaPersonaje = {
   id: 1,
@@ -93,6 +111,24 @@ export const sampleMazo: Mazo = {
   nombre: "None",
   version: "0.0",
   fecha_creacion: "2024-03-17",
+};
+
+export const sampleRoom: Room = {
+  id: 1,
+  name: "Sala de Prueba",
+  participants: 0,
+  status: "created",
+  fecha_creacion: "2024-03-17",
+  mazo: 1,
+};
+
+export const sampleParticipant: Participant = {
+  id: 1,
+  name: "Jugador 1",
+  admin: true,
+  dinero: 1000,
+  karma: 500,
+  fama: 300,
 };
 
 // Función para obtener los mazos desde la API
@@ -171,5 +207,110 @@ export async function getCartasEspecialesFromAPI(mazoId: string | null): Promise
   } catch (error) {
     console.error("Error al obtener las cartas especiales:", error);
     return [sampleCartaEspecial];
+  }
+}
+
+export async function joinRoomFromAPI(roomId: string | null): Promise<any> {
+  try {
+    const response = await fetch(`${import.meta.env.API_URL}/api/rooms/${roomId}`);
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`);
+    }
+    // Verificar si la respuesta contiene datos de la sala
+    const roomData = await response.json();
+
+    if (roomData && roomData.success) {
+      // Obtener los datos del jugador
+      const playerName = document.getElementById('player-name') as HTMLInputElement;
+
+      // Datos adicionales opcionales
+      const extraData = {
+        connectionTime: new Date().toISOString(),
+        device: navigator.userAgent
+      };
+
+      // Agregar el participante a la sala
+      const joinResponse = await fetch(`${import.meta.env.API_URL}/api/rooms/${roomId}/participants`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: playerName.value,
+          role: 'player',
+          extraData // Datos opcionales adicionales
+        }),
+      });
+
+      if (!joinResponse.ok) {
+        throw new Error(`Error al agregar participante: ${joinResponse.status}`);
+      }
+
+      return await joinResponse.json();
+    }
+  } catch (error) {
+    console.error("Error al unirse a la sala:", error);
+    return null;
+  }
+}
+
+export async function createRoomOnAPI(
+  name: string,
+  adminName: string,
+  mazoId: number,
+  maxParticipants: number = 6
+): Promise<Room> {
+  try {
+    const response = await fetch(`${import.meta.env.API_URL}/api/rooms/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: name,
+        admin_name: adminName,
+        mazo: mazoId,
+        max_participants: maxParticipants
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.room;
+  } catch (error) {
+    console.error("Error al crear la sala:", error);
+    return sampleRoom;
+  }
+}
+
+export async function createParticipantOnAPI(roomId: string | null): Promise<Participant> {
+  try {
+    const response = await fetch(`${import.meta.env.API_URL}/api/rooms/${roomId}/participants`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error al crear el participante:", error);
+    return sampleParticipant;
+  }
+}
+
+export async function getParticipantsFromAPI(roomId: string | null): Promise<Participant[]> {
+  try {
+    const response = await fetch(`${import.meta.env.API_URL}/api/rooms/${roomId}/participants`);
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error al obtener los participantes:", error);
+    return [sampleParticipant];
   }
 }
