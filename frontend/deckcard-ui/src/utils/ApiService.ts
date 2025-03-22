@@ -44,21 +44,26 @@ export interface CartaEspecial {
 }
 
 export interface Room {
-  id: number;
+  code: string;
   name: string;
-  participants: number;
+  mazo: Mazo;
   status: string;
   fecha_creacion: string;
-  mazo: number;
+  participants: Participant[];
+  max_participants: number;
 }
 
 export interface Participant {
   id: number;
   name: string;
   admin: boolean;
-  dinero: number;
-  karma: number;
-  fama: number;
+  room: Room | null;
+  carta_personaje: CartaPersonaje | null;
+  cartas_negocios: CartaNegocio[] | null;
+  cartas_especiales: CartaEspecial[] | null;
+  dinero: number | null;
+  karma: number | null;
+  fama: number | null;
 }
 
 // Datos de muestra como fallback
@@ -113,28 +118,47 @@ export const sampleMazo: Mazo = {
   fecha_creacion: "2024-03-17",
 };
 
-export const sampleRoom: Room = {
-  id: 1,
-  name: "Sala de Prueba",
-  participants: 0,
-  status: "created",
-  fecha_creacion: "2024-03-17",
-  mazo: 1,
-};
 
 export const sampleParticipant: Participant = {
   id: 1,
   name: "Jugador 1",
-  admin: true,
+  admin: false,
+  room: null,
+  carta_personaje: null,
+  cartas_negocios: null,
+  cartas_especiales: null,
   dinero: 1000,
   karma: 500,
   fama: 300,
 };
 
+export const sampleAdminParticipant: Participant = {
+  id: 1,
+  name: "Jugador 1",
+  admin: true,
+  room: null,
+  carta_personaje: null,
+  cartas_negocios: null,
+  cartas_especiales: null,
+  dinero: 1000,
+  karma: 500,
+  fama: 300,
+};
+
+export const sampleRoom: Room = {
+  code: "000ABC",
+  name: "Sala de Prueba",
+  mazo: sampleMazo,
+  status: "created",
+  fecha_creacion: "2024-03-17",
+  max_participants: 6,
+  participants: [sampleAdminParticipant],
+};
+
 // Función para obtener los mazos desde la API
 export async function getMazosFromAPI(): Promise<Mazo[]> {
   try {
-    const response = await fetch(`${import.meta.env.API_URL}/api/mazos/`);
+    const response = await fetch(`${import.meta.env.PUBLIC_API_URL}/api/mazos/`);
     if (!response.ok) {
       throw new Error(`Error: ${response.status}`);
     }
@@ -150,7 +174,7 @@ export async function getMazosFromAPI(): Promise<Mazo[]> {
 export async function getCartasPersonajeFromAPI(mazoId: string | null): Promise<CartaPersonaje[]> {
   try {
     // Construir la URL dependiendo de si hay un mazo seleccionado
-    let url = `${import.meta.env.API_URL}/api/personajes/`;
+    let url = `${import.meta.env.PUBLIC_API_URL}/api/personajes/`;
     if (mazoId) {
       url += `?mazo=${mazoId}`;
     }
@@ -175,7 +199,7 @@ export async function getCartasPersonajeFromAPI(mazoId: string | null): Promise<
 // Función para obtener cartas de negocio
 export async function getCartasNegocioFromAPI(mazoId: string | null): Promise<CartaNegocio[]> {
   try {
-    let url = `${import.meta.env.API_URL}/api/negocios/`;
+    let url = `${import.meta.env.PUBLIC_API_URL}/api/negocios/`;
     if (mazoId) {
       url += `?mazo=${mazoId}`;
     }
@@ -194,7 +218,7 @@ export async function getCartasNegocioFromAPI(mazoId: string | null): Promise<Ca
 // Función para obtener cartas especiales
 export async function getCartasEspecialesFromAPI(mazoId: string | null): Promise<CartaEspecial[]> {
   try {
-    let url = `${import.meta.env.API_URL}/api/especiales/`;
+    let url = `${import.meta.env.PUBLIC_API_URL}/api/especiales/`;
     if (mazoId) {
       url += `?mazo=${mazoId}`;
     }
@@ -210,47 +234,97 @@ export async function getCartasEspecialesFromAPI(mazoId: string | null): Promise
   }
 }
 
-export async function joinRoomFromAPI(roomId: string | null): Promise<any> {
+export async function getRoomsFromAPI(): Promise<Room[] | null> {
   try {
-    const response = await fetch(`${import.meta.env.API_URL}/api/rooms/${roomId}`);
+    const response = await fetch(`${import.meta.env.PUBLIC_API_URL}/api/rooms`);
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error al obtener las salas:", error);
+    return null;
+  }
+}
+
+export async function getRoomFromAPI(roomId: string | null): Promise<Room | null> {
+  try {
+    const url = `${import.meta.env.PUBLIC_API_URL}/api/rooms/${roomId}`;
+    console.log(`Fetching room from URL: ${url}`);
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`);
+    }
+    const roomData = await response.json();
+    console.log("Room data received:", roomData);
+    return roomData.Room;
+  } catch (error) {
+    console.error("Error al obtener la sala:", error);
+    return null;
+  }
+}
+
+export async function joinRoomFromAPI(roomId: string, playerName: string): Promise<Participant | null> {
+  try {
+    const url = `${import.meta.env.PUBLIC_API_URL}/api/rooms/${roomId}`;
+    console.log(`Checking room at URL: ${url}`);
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Error: ${response.status}`);
     }
     // Verificar si la respuesta contiene datos de la sala
     const roomData = await response.json();
+    console.log("Room data for join:", roomData);
 
-    if (roomData && roomData.success) {
-      // Obtener los datos del jugador
-      const playerName = document.getElementById('player-name') as HTMLInputElement;
-
-      // Datos adicionales opcionales
-      const extraData = {
-        connectionTime: new Date().toISOString(),
-        device: navigator.userAgent
-      };
-
-      // Agregar el participante a la sala
-      const joinResponse = await fetch(`${import.meta.env.API_URL}/api/rooms/${roomId}/participants`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: playerName.value,
-          role: 'player',
-          extraData // Datos opcionales adicionales
-        }),
-      });
-
-      if (!joinResponse.ok) {
-        throw new Error(`Error al agregar participante: ${joinResponse.status}`);
-      }
-
-      return await joinResponse.json();
+    if (!roomData || !roomData.room) {
+      console.error("Datos de sala inválidos:", roomData);
+      throw new Error("Datos de sala inválidos");
     }
+
+    // Datos adicionales opcionales
+    const userAgent = navigator.userAgent;
+    const connectionTime = new Date().toISOString();
+    // Agregar el participante a la sala
+    const participantUrl = `${import.meta.env.PUBLIC_API_URL}/api/rooms/${roomId}/participants`;
+    console.log(`Adding participant at URL: ${participantUrl}`);
+
+    // Preparar datos para la solicitud
+    const participantData = {
+      name: playerName,
+      admin: false,
+      room: roomData.room,
+      userAgent: userAgent,
+    };
+
+    console.log("Enviando datos del participante:", participantData);
+
+    const joinResponse = await fetch(participantUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(participantData),
+    });
+
+    if (!joinResponse.ok) {
+      console.error(`Error al agregar participante: ${joinResponse.status}`);
+      const errorText = await joinResponse.text();
+      console.error("Detalles del error:", errorText);
+      throw new Error(`Error al agregar participante: ${joinResponse.status}`);
+    }
+
+    const responseData = await joinResponse.json();
+    console.log("Respuesta del servidor al crear participante:", responseData);
+
+    if (responseData && responseData.participant) {
+      return responseData.participant;
+    } else {
+      throw new Error("Formato de respuesta inesperado al crear participante");
+    }
+
   } catch (error) {
     console.error("Error al unirse a la sala:", error);
-    return null;
+    throw error; // Re-lanzamos el error para que la interfaz pueda manejarlo
   }
 }
 
@@ -261,7 +335,7 @@ export async function createRoomOnAPI(
   maxParticipants: number = 6
 ): Promise<Room> {
   try {
-    const response = await fetch(`${import.meta.env.API_URL}/api/rooms/`, {
+    const response = await fetch(`${import.meta.env.PUBLIC_API_URL}/api/rooms/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -286,7 +360,7 @@ export async function createRoomOnAPI(
 
 export async function createParticipantOnAPI(roomId: string | null): Promise<Participant> {
   try {
-    const response = await fetch(`${import.meta.env.API_URL}/api/rooms/${roomId}/participants`, {
+    const response = await fetch(`${import.meta.env.PUBLIC_API_URL}/api/rooms/${roomId}/participants`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -304,7 +378,7 @@ export async function createParticipantOnAPI(roomId: string | null): Promise<Par
 
 export async function getParticipantsFromAPI(roomId: string | null): Promise<Participant[]> {
   try {
-    const response = await fetch(`${import.meta.env.API_URL}/api/rooms/${roomId}/participants`);
+    const response = await fetch(`${import.meta.env.PUBLIC_API_URL}/api/rooms/${roomId}/participants`);
     if (!response.ok) {
       throw new Error(`Error: ${response.status}`);
     }

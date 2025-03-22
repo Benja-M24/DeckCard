@@ -1,15 +1,11 @@
 ---
 import Layout from "@layouts/Layout.astro";
-import type { Mazo } from "@utils/ApiService";
-import {
-    getMazosFromAPI,
-    joinRoomFromAPI,
-    createRoomOnAPI,
-    createParticipantOnAPI,
-    getParticipantsFromAPI,
-} from "@utils/ApiService";
+import type { Mazo as MazoType } from "@utils/ApiService";
+import { getMazosFromAPI } from "@utils/ApiService";
 
-const mazos: Mazo[] = await getMazosFromAPI();
+const mazos: MazoType[] = await getMazosFromAPI();
+
+const selectedRoomCode = Astro.url.searchParams.get("Room");
 ---
 
 <Layout>
@@ -17,7 +13,7 @@ const mazos: Mazo[] = await getMazosFromAPI();
         <!-- Create or join a room -->
         <div class="flex flex-col justify-center items-center">
             <div
-                class="w-full max-w-md mx-auto bg-white rounded-xl shadow-md p-6 mb-8"
+                class={`w-full max-w-md mx-auto bg-white rounded-xl shadow-md p-6 mb-8 ${selectedRoomCode ? "hidden" : ""}`}
             >
                 <h1 class="text-2xl font-bold self-center px-2 pt-2">
                     Start playing
@@ -149,11 +145,274 @@ const mazos: Mazo[] = await getMazosFromAPI();
                 </div>
             </div>
 
+            <div
+                id="room-view"
+                class={`w-full max-w-lg mx-auto bg-white rounded-xl shadow-md p-6 mb-8 ${selectedRoomCode ? "" : "hidden"}`}
+            >
+                <div class="mb-4">
+                    <h1
+                        id="room-title"
+                        class="block text-xl font-bold text-gray-800 text-center mb-2"
+                    >
+                        Test Title
+                    </h1>
+                    <div
+                        class="flex justify-start mx-auto p-2 mb-6 border-1 border-b-2 border-gray-500 rounded-xl shadow-sm"
+                    >
+                        <div
+                            class="flex flex-col w-full sm:flex-row justify-center"
+                        >
+                            <div
+                                class="flex flex-col py-0 px-2 sm:py-2 sm:w-1/2 h-full"
+                            >
+                                <span
+                                    id="room-name-span"
+                                    class="block text-lg font-medium text-gray-800"
+                                    >Test Title</span
+                                >
+                                <label
+                                    for="room-name-span"
+                                    class="block text-sm font-light text-gray-600 mb-1 border-b-1 border-gray-300"
+                                    >Nombre de la sala</label
+                                >
+                                <span
+                                    id="room-code-span"
+                                    class="block text-lg font-medium text-gray-800"
+                                    >#83a7e9</span
+                                >
+                                <label
+                                    for="room-code-span"
+                                    class="block text-sm font-light text-gray-600 mb-1 border-b-1 border-gray-300"
+                                    >Código de la sala
+                                </label>
+                                <span
+                                    id="room-mazo-span"
+                                    class="block text-lg font-medium text-gray-800"
+                                    >Mazo ID: 09
+                                </span>
+                                <label
+                                    for="room-mazo-span"
+                                    class="block text-sm font-light text-gray-600 mb-1 border-b-1 border-gray-300"
+                                    >Versión del mazo</label
+                                >
+                                <div
+                                    class="block flex-row items-center justify-between"
+                                >
+                                    <span
+                                        class="inline-block text-lg font-medium text-gray-800 pr-2"
+                                        >Jugadores:
+                                    </span>
+                                    <samp
+                                        id="room-playersIn-span"
+                                        class="inline-block text-xl font-bold text-gray-800"
+                                        >3</samp
+                                    >
+                                    <samp
+                                        class="inline-block text-xl font-bold text-gray-800"
+                                        >/</samp
+                                    >
+                                    <samp
+                                        id="room-playersExpected-span"
+                                        class="inline-block text-xl font-bold text-gray-800"
+                                        >4</samp
+                                    >
+                                </div>
+                                <label
+                                    for="room-players-span"
+                                    class="block text-sm font-light text-gray-600 mb-1 border-b-1 border-gray-300"
+                                    >conectados / necesarios</label
+                                >
+                                <span
+                                    id="room-status-span"
+                                    class="block text-lg font-medium text-gray-800"
+                                    >Esperando jugadores...</span
+                                >
+                                <label
+                                    for="room-status-span"
+                                    class="block text-sm font-light text-gray-600 mb-1 border-b-1 border-gray-300"
+                                    >Status</label
+                                >
+                                <span
+                                    id="room-date-span"
+                                    class="block text-lg font-medium text-gray-800"
+                                    >22/03/2025</span
+                                >
+                                <label
+                                    for="room-date-span"
+                                    class="block text-sm font-light text-gray-600 mb-1 border-b-1 border-gray-300"
+                                    >Fecha de creación</label
+                                >
+                            </div>
+                            <div class="block flex-col p-2 sm:w-1/2 h-full">
+                                <div
+                                    class="flex justify-start mx-auto w-full h-full p-2 mb-6 border-1 border-gray-300 rounded-2xl shadow-sm"
+                                >
+                                    <ul class="flex flex-col">
+                                        <li class="flex flex-row items-center">
+                                            <samp
+                                                class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative"
+                                            >
+                                                <span
+                                                    class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"
+                                                ></span>
+                                            </samp>
+
+                                            <span
+                                                class={`block text-md font-medium p-1 ${["text-red-500", "text-blue-600", "text-green-600", "text-purple-600", "text-amber-600", "text-indigo-600", "text-yellow-400"][Math.floor(Math.random() * 7)]}`}
+                                                >Benja Marmol</span
+                                            >
+                                        </li>
+                                        <li class="flex flex-row items-center">
+                                            <samp
+                                                class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative"
+                                            >
+                                                <span
+                                                    class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"
+                                                ></span>
+                                            </samp>
+                                            <span
+                                                class={`block text-md font-medium p-1 ${["text-red-500", "text-blue-600", "text-green-600", "text-purple-600", "text-amber-600", "text-indigo-600", "text-yellow-400"][Math.floor(Math.random() * 7)]}`}
+                                                >Luis</span
+                                            >
+                                        </li>
+                                        <li class="flex flex-row items-center">
+                                            <samp
+                                                class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative"
+                                            >
+                                                <span
+                                                    class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"
+                                                ></span>
+                                            </samp>
+                                            <span
+                                                class={`block text-md font-medium p-1 ${["text-red-500", "text-blue-600", "text-green-600", "text-purple-600", "text-amber-600", "text-indigo-600", "text-yellow-400"][Math.floor(Math.random() * 7)]}`}
+                                                >Luis</span
+                                            >
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    class="flex flex-row h-full w-full justify-center items-center p-2 mb-4"
+                >
+                    <button
+                        type="button"
+                        id="start-game"
+                        class="w-9/10 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-500 text-white font-medium py-2 px-4 mx-2 rounded-md transition-colors duration-300 disabled:opacity-50 not-active:opacity-50 not-active:cursor-not-allowed"
+                    >
+                        Comenzar juego
+                    </button>
+                    <button
+                        type="button"
+                        id="refresh"
+                        class="w-1/10 flex items-center justify-center bg-amber-600 hover:bg-amber-500 text-white font-medium py-2 px-4 mx-2 rounded-md transition-colors duration-300"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            id="refresh-icon"
+                            class="flex justify-center items-center w-6 h-6 transition-transform duration-2000 ease-in-out"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            ></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
             <script>
                 import {
                     createRoomOnAPI,
                     joinRoomFromAPI,
+                    getRoomFromAPI,
                 } from "@utils/ApiService";
+                import type {
+                    Room as RoomType,
+                    Participant as ParticipantType,
+                } from "@utils/ApiService";
+
+                let currentRoom: RoomType | null = null;
+                let currentParticipant: ParticipantType | null = null;
+
+                function redirectToRoom() {
+                    if (!currentRoom || !currentParticipant) {
+                        throw new Error(
+                            "Datos de sala o participante inválidos",
+                        );
+                    }
+                    renderRoomview();
+
+                    const currentUrl = new URL(window.location.href);
+
+                    sessionStorage.setItem(
+                        "currentParticipantId",
+                        currentParticipant.id.toString(),
+                    );
+                    currentUrl.searchParams.set("Room", currentRoom.code);
+                    window.location.href = currentUrl.toString();
+                }
+
+                function renderRoomview() {
+                    const roomTitle = document.getElementById("room-title");
+                    const roomCode = document.getElementById("room-code-span");
+                    const roomMazo = document.getElementById("room-mazo-span");
+                    const roomPlayersIn = document.getElementById(
+                        "room-playersIn-span",
+                    );
+                    const roomPlayersExpected = document.getElementById(
+                        "room-playersExpected-span",
+                    );
+                    const roomStatus =
+                        document.getElementById("room-status-span");
+                    const roomDate = document.getElementById("room-date-span");
+                    const startButton = document.getElementById(
+                        "start-game",
+                    ) as HTMLButtonElement;
+
+                    if (
+                        roomTitle &&
+                        roomCode &&
+                        roomMazo &&
+                        roomPlayersIn &&
+                        roomPlayersExpected &&
+                        roomStatus &&
+                        roomDate &&
+                        startButton
+                    ) {
+                        if (!currentRoom) {
+                            throw new Error("Sala no encontrada");
+                        }
+                        roomTitle.textContent = currentRoom.name;
+                        roomCode.textContent = currentRoom.code;
+                        roomMazo.textContent =
+                            currentRoom.mazo.nombre +
+                            " V(" +
+                            currentRoom.mazo.version +
+                            ")";
+                        roomPlayersIn.textContent =
+                            currentRoom.participants.length.toString();
+                        roomPlayersExpected.textContent =
+                            currentRoom.max_participants.toString();
+                        roomStatus.textContent = currentRoom.status;
+                        roomDate.textContent = new Date(
+                            currentRoom.fecha_creacion,
+                        ).toLocaleDateString();
+                        if (currentRoom.status == "in_progress") {
+                            startButton.disabled = true;
+                            startButton.classList.toggle(
+                                "disabled:opacity-50 not-active:opacity-50 not-active:cursor-not-allowed",
+                                true,
+                            );
+                        }
+                    }
+                }
 
                 document.addEventListener("DOMContentLoaded", () => {
                     const toggle = document.getElementById(
@@ -165,6 +424,21 @@ const mazos: Mazo[] = await getMazosFromAPI();
                     const createRoomButton =
                         document.getElementById("create-room");
                     const joinRoomButton = document.getElementById("join-room");
+                    const startButton = document.getElementById("start-game");
+                    const refreshButton = document.getElementById("refresh");
+                    const refreshIcon = document.getElementById("refresh-icon");
+
+                    if (refreshButton && refreshIcon) {
+                        refreshButton.addEventListener("click", () => {
+                            // Aplicar la animación
+                            refreshIcon.classList.add("animate-spin");
+
+                            // Remover la animación después de 1 segundo
+                            setTimeout(() => {
+                                refreshIcon.classList.remove("animate-spin");
+                            }, 2500);
+                        });
+                    }
 
                     if (toggle && joinForm && createForm) {
                         toggle.addEventListener("change", () => {
@@ -179,7 +453,7 @@ const mazos: Mazo[] = await getMazosFromAPI();
                     }
 
                     if (createRoomButton) {
-                        createRoomButton.addEventListener("click", () => {
+                        createRoomButton.addEventListener("click", async () => {
                             console.log("Botón de creación de sala presionado");
                             const roomName = (
                                 document.getElementById(
@@ -206,25 +480,76 @@ const mazos: Mazo[] = await getMazosFromAPI();
                                 ).value,
                             );
 
-                            createRoomOnAPI(
-                                roomName,
-                                adminName,
-                                mazoId,
-                                playersNumber,
-                            );
+                            try {
+                                currentRoom = await createRoomOnAPI(
+                                    roomName,
+                                    adminName,
+                                    mazoId,
+                                    playersNumber,
+                                );
+                                currentParticipant =
+                                    currentRoom.participants.find(
+                                        (p: ParticipantType) => p.admin,
+                                    ) ?? null;
+
+                                redirectToRoom();
+                            } catch (error) {
+                                console.error("Error creando sala:", error);
+                                alert(
+                                    "Error al crear sala: " +
+                                        (error as Error).message,
+                                );
+                            }
                         });
                     }
 
                     if (joinRoomButton) {
-                        joinRoomButton.addEventListener("click", () => {
+                        joinRoomButton.addEventListener("click", async () => {
                             console.log("Botón de unión a sala presionado");
                             const roomCode = (
                                 document.getElementById(
                                     "room-code",
                                 ) as HTMLInputElement
                             ).value;
+                            const playerName = (
+                                document.getElementById(
+                                    "player-name",
+                                ) as HTMLInputElement
+                            ).value;
 
-                            joinRoomFromAPI(roomCode);
+                            try {
+                                currentParticipant = await joinRoomFromAPI(
+                                    roomCode,
+                                    playerName,
+                                );
+
+                                currentRoom = await getRoomFromAPI(roomCode);
+                                redirectToRoom();
+                            } catch (error) {
+                                console.error(
+                                    "Error uniendo a la sala:",
+                                    error,
+                                );
+                                alert(
+                                    "Error al unirse a la sala: " +
+                                        (error as Error).message,
+                                );
+                            }
+                        });
+                    }
+
+                    if (startButton && currentRoom?.status === "in_progress") {
+                        startButton.addEventListener("click", async () => {
+                            console.log("Botón de inicio de juego presionado");
+                            alert("Funcionalidad no implementada");
+                            // Implementación del inicio de juego (será desarrollada posteriormente)
+                        });
+                    }
+
+                    if (refreshButton) {
+                        refreshButton.addEventListener("click", async () => {
+                            console.log("Botón de refresco de sala presionado");
+                            renderRoomview();
                         });
                     }
                 });

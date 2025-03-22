@@ -5,7 +5,9 @@ from .models import (
     TipoDeNegocio, 
     CartaNegocio, 
     CartaPersonaje, 
-    CartaEspecial
+    CartaEspecial,
+    Room,
+    Participant
 )
 
 class CartaNegocioInline(admin.TabularInline):
@@ -56,3 +58,17 @@ class CartaEspecialAdmin(admin.ModelAdmin):
     list_display = ('titulo', 'frase', 'mazo')
     search_fields = ('titulo', 'frase', 'consignas_juego')
     list_filter = ('mazo',)
+
+@admin.register(Room)
+class RoomAdmin(admin.ModelAdmin):
+    list_display = ('code', 'name', 'status', 'mazo', 'fecha_creacion', 'max_participants', 'participants_count')
+    search_fields = ('code', 'name')
+    list_filter = ('status', 'mazo', 'fecha_creacion')
+    readonly_fields = ('code',)
+
+@admin.register(Participant)
+class ParticipantAdmin(admin.ModelAdmin):
+    list_display = ('name', 'room', 'admin', 'dinero', 'karma', 'fama', 'fecha_ingreso')
+    search_fields = ('name',)
+    list_filter = ('room', 'admin', 'fecha_ingreso')
+    filter_horizontal = ('cartas_negocios', 'cartas_especiales')

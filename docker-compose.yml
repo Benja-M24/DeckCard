@@ -25,7 +25,7 @@ services:
       - DeckCard-network
     environment:
       - NODE_ENV=${NODE_ENV:-development}
-      - API_URL=${DJANGO_API_URL}
+      - PUBLIC_API_URL=${DJANGO_API_URL}
     restart: unless-stopped
 
   backend:

@@ -214,6 +214,10 @@ class CartaEspecial(models.Model):
     def __str__(self):
         return self.titulo
 
+# Borra el registro si la sala está finalizada y tiene más de un día de antigüedad
+@classmethod
+def clean_older_rooms(room):
+    room.objects.filter(fecha_creacion__lt=timezone.now() - timedelta(days=2)).delete()
 
 def generate_room_code():
     """
@@ -240,12 +244,12 @@ class Room(models.Model):
     ]
     
     # Código único hexadecimal de 6 caracteres para la sala
-    code = models.CharField(max_length=6, unique=True, default=generate_room_code, verbose_name="Código de sala")
+    code = models.CharField(max_length=6, primary_key=True, default=generate_room_code, verbose_name="Código de sala")
     name = models.CharField(max_length=100, verbose_name="Nombre de la sala")
-    max_participants = models.PositiveIntegerField(default=6, validators=[MinValueValidator(2), MaxValueValidator(10)], verbose_name="Máximo de participantes")
+    mazo = models.ForeignKey(Mazo, on_delete=models.PROTECT, related_name='rooms', verbose_name="Mazo")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='created', verbose_name="Estado")
     fecha_creacion = models.DateTimeField(default=timezone.now, verbose_name="Fecha de creación")
-    mazo = models.ForeignKey(Mazo, on_delete=models.PROTECT, related_name='rooms', verbose_name="Mazo")
+    max_participants = models.PositiveIntegerField(default=6, validators=[MinValueValidator(2), MaxValueValidator(10)], verbose_name="Máximo de participantes")
     
     class Meta:
         verbose_name = "Sala"
@@ -264,32 +268,29 @@ class Room(models.Model):
         return self.participants_count >= self.max_participants
     
     @property
-    def is_started(self):
-        return self.status == 'in_progress'
-    
-    @property
-    def is_finished(self):
-        return self.status == 'finished'
-    # Borra el registro si la sala está finalizada y tiene más de un día de antigüedad
-    def clean(self):
-        if self.status == 'finished' and (timezone.now() - self.fecha_creacion).days > 1:
-            self.delete()
+    def update_status(self):
+        """Actualiza automáticamente el estado basado en cantidad de participantes"""
+        current_count = self.participants.count()
+        
+        if current_count < self.max_participants:
+            self.status = 'waiting'
+        elif current_count == self.max_participants:
+            self.status = 'in_progress'
+        
+        self.save()
+        return self.status
 
 class Participant(models.Model):
     """
     Modelo para representar un participante en una sala de juego.
     """
-    ROLE_CHOICES = [
-        ('admin', 'Administrador'),
-        ('player', 'Jugador'),
-    ]
     
     name = models.CharField(max_length=100, verbose_name="Nombre")
     admin = models.BooleanField(default=False, verbose_name="Administrador")
-    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='jugadores', verbose_name="Sala")
-    carta_personaje = models.ManyToManyField(CartaPersonaje, related_name='jugadores', verbose_name="Carta de personaje")
-    cartas_negocios = models.ManyToManyField(CartaNegocio, related_name='jugadores', verbose_name="Cartas de negocio")
-    cartas_especiales = models.ManyToManyField(CartaEspecial, related_name='jugadores', verbose_name="Carta especial")
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='participants', verbose_name="Sala")
+    carta_personaje = models.ForeignKey(CartaPersonaje, on_delete=models.CASCADE, related_name='participants', verbose_name="Carta de personaje", null=True, blank=True)
+    cartas_negocios = models.ManyToManyField(CartaNegocio, default=[], related_name='participants', verbose_name="Cartas de negocio")
+    cartas_especiales = models.ManyToManyField(CartaEspecial, default=[], related_name='participants', verbose_name="Carta especial")
     dinero = models.IntegerField(
         default=0,
         verbose_name="Dinero",
@@ -314,7 +315,7 @@ class Participant(models.Model):
             MaxValueValidator(1000, message='Límite máximo: 1000')
         ]
     )
-    extra_data = models.JSONField(default=dict, blank=True, null=True, verbose_name="Datos adicionales")
+    userAgent = models.JSONField(default=dict, blank=True, null=True, verbose_name="Datos adicionales")
     fecha_ingreso = models.DateTimeField(default=timezone.now, verbose_name="Fecha de ingreso")
     
     class Meta:

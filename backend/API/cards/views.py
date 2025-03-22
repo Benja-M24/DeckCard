@@ -1,4 +1,3 @@
-from django.shortcuts import render, get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -107,6 +106,7 @@ class RoomViewSet(viewsets.ModelViewSet):
     queryset = Room.objects.all()
     
     def get_serializer_class(self):
+        # Room.clean_older_rooms()
         if self.action == 'create':
             return RoomCreateSerializer
         return RoomSerializer
