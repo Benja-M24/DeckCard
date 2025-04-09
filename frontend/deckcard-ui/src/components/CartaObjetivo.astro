@@ -1,0 +1,55 @@
+---
+import type { CartaObjetivo } from "../models/types";
+
+interface Props {
+  carta: CartaObjetivo;
+}
+
+const { carta } = Astro.props;
+---
+
+<div class="carta-objetivo">
+  <div class="p-4">
+    <h2 class="text-2xl font-bold mb-4 text-blue-600">{carta.titulo}</h2>
+    <div class="flex justify-center flex-col lg:flex-row gap-6">
+      <div class="flex-1 flex flex-col items-center">
+        <div
+          class="bg-blue-100 p-4 rounded-lg shadow-md w-full max-w-xs mb-4"
+        >
+          {
+            carta.imagen && (
+              <img
+                src={carta.imagen}
+                alt={carta.titulo}
+                class="w-full h-auto object-cover rounded-md border-2 border-blue-300 shadow-md mb-4"
+              />
+            )
+          }
+          <div class="border-2 border-blue-400 p-6 rounded-md">
+            <h3 class="text-xl font-semibold mb-2 text-center">
+              {carta.titulo}
+            </h3>
+            <div class="flex justify-center">
+              <span class="inline-block bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded-full">
+                Objetivo
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="flex-1 flex flex-col gap-3">
+        <div>
+          <h3 class="text-md text-center font-bold mb-1">Consignas de Juego</h3>
+          <div class="bg-gray-50 p-3 rounded-md">
+            <p class="text-sm text-gray-700">{carta.consignas_juego}</p>
+          </div>
+        </div>
+        <div class="mt-4 bg-blue-50 p-3 rounded-md shadow-sm">
+          <p class="text-sm">
+            Versión: <span class="font-semibold">#{carta.version}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

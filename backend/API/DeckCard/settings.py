@@ -78,19 +78,29 @@ INSTALLED_APPS = [
     'core',
 ]
 
-MIDDLEWARE = [
+# Middleware para todos los entornos
+BASE_MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Additional security middleware
     'django.middleware.http.ConditionalGetMiddleware',
     'django.middleware.gzip.GZipMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
 ]
+
+# Agregar CSRF middleware solo en producción
+if os.getenv('DJANGO_ENV', 'development').lower() == 'production' or not DEBUG:
+    MIDDLEWARE = BASE_MIDDLEWARE.copy()
+    # Insertar CSRF middleware en la posición adecuada (después de session y antes de auth)
+    MIDDLEWARE.insert(4, 'django.middleware.csrf.CsrfViewMiddleware')
+else:
+    # Entorno de desarrollo: no usar CSRF middleware
+    MIDDLEWARE = BASE_MIDDLEWARE
 
 # Content Security Policy - Only add if not handled by Traefik
 # If you want to handle CSP in Django instead of Traefik, uncomment and install django-csp
@@ -180,13 +190,42 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ORIGIN_WHITELIST = [
+# Specific domains that are allowed to make cross-origin requests
+CORS_ALLOWED_ORIGINS = [
     'https://deckcards.lussocastelli.com',
     'http://frontend:3300',  # Servicio de frontend en Docker
     'http://backend:8800',  # Servicio de backend en Docker
+    'http://localhost:3300',  # Local development
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True  # Temporal, para facilitar desarrollo
+# Allow credentials in cross-origin requests
+CORS_ALLOW_CREDENTIALS = True
+
+# Allow all request methods
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Allow all headers in requests
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# For development only - remove in production
+CORS_ALLOW_ALL_ORIGINS = True
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [

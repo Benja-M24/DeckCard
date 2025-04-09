@@ -37,10 +37,11 @@ urlpatterns = [
     # Admin en su URL original (accesible tanto desde / como desde /admin/)
     path('admin/', admin.site.urls),
     
-    # API de cartas
-    path('api/', include('cards.urls')),
+    # API de cartas - Ensure this is processed before the catch-all pattern
+    path('', include('cards.urls')),
     
     # Captura cualquier otra URL y devuelve 404
+    # This should be the last pattern to catch anything not matched above
     re_path(r'^.*$', handle_404),
 ]
 

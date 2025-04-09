@@ -3,20 +3,24 @@ import CardControls from "./CardControls.astro";
 import CartaNegocio from "./CartaNegocio.astro";
 import CartaEspecial from "./CartaEspecial.astro";
 import CartaPersonaje from "./CartaPersonaje.astro";
+import CartaObjetivo from "./CartaObjetivo.astro";
+import CartaEvento from "./CartaEvento.astro";
 import type {
   CartaPersonaje as CartaPersonajeType,
   CartaNegocio as CartaNegocioType,
   CartaEspecial as CartaEspecialType,
-} from "@utils/ApiService";
+  CartaObjetivo as CartaObjetivoType,
+  CartaEvento as CartaEventoType,
+} from "../models/types";
 
 interface Props {
-  selectedMazoId: string | null;
+  selectedVersionId: string | null;
   selectedCardType: string | null;
   cartas: any[];
   currentCardIndex: number;
 }
 
-const { selectedMazoId, selectedCardType, cartas, currentCardIndex } =
+const { selectedVersionId, selectedCardType, cartas, currentCardIndex } =
   Astro.props;
 const currentCarta = cartas[currentCardIndex];
 const maxCardIndex = cartas.length - 1;
@@ -49,7 +53,28 @@ function isCartaEspecial(carta: any): carta is CartaEspecialType {
     "titulo" in carta &&
     "frase" in carta &&
     !("dinero" in carta) &&
-    !("tipo" in carta)
+    !("tipo" in carta) &&
+    !("objetivo" in carta) &&
+    !("tipo_evento" in carta)
+  );
+}
+
+function isCartaObjetivo(carta: any): carta is CartaObjetivoType {
+  return (
+    carta &&
+    "titulo" in carta &&
+    "objetivo" in carta &&
+    typeof carta.consignas_juego === "string"
+  );
+}
+
+function isCartaEvento(carta: any): carta is CartaEventoType {
+  return (
+    carta &&
+    "titulo" in carta &&
+    "frase" in carta &&
+    "tipo_evento" in carta &&
+    Array.isArray(carta.consignas_juego)
   );
 }
 
@@ -60,21 +85,22 @@ let shouldRenderNegocio =
   selectedCardType === "carta-negocio" && isCartaNegocio(currentCarta);
 let shouldRenderEspecial =
   selectedCardType === "carta-especial" && isCartaEspecial(currentCarta);
+let shouldRenderObjetivo =
+  selectedCardType === "carta-objetivo" && isCartaObjetivo(currentCarta);
+let shouldRenderEvento =
+  selectedCardType === "carta-evento" && isCartaEvento(currentCarta);
 ---
 
 <div
   id="card-viewer"
   class={`flex justify-center mt-4
-  ${!selectedMazoId || !selectedCardType ? "hidden" : ""}
+  ${!selectedVersionId || !selectedCardType ? "hidden" : ""}
   ${!selectedCardType ? "" : "lg:w-3/4"}
   `}
 >
   <div
     class="relative bg-white p-2 rounded-xl shadow-2xl w-[min(90vw,600px)] max-w-xs sm:max-w-md md:max-w-lg lg:max-w-full lg:justify-right lg:rounded-3xl border-gray-500 border-l-1 border-b-2 border-t-3 border-r-3"
   >
-    {
-      /* Mostrar la carta según su tipo, usando type guards para asegurar compatibilidad */
-    }
     {
       shouldRenderPersonaje && (
         <CartaPersonaje carta={currentCarta as CartaPersonajeType} />
@@ -88,6 +114,16 @@ let shouldRenderEspecial =
     {
       shouldRenderEspecial && (
         <CartaEspecial carta={currentCarta as CartaEspecialType} />
+      )
+    }
+    {
+      shouldRenderObjetivo && (
+        <CartaObjetivo carta={currentCarta as CartaObjetivoType} />
+      )
+    }
+    {
+      shouldRenderEvento && (
+        <CartaEvento carta={currentCarta as CartaEventoType} />
       )
     }
 

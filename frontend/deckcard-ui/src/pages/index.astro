@@ -1,58 +1,41 @@
 ---
 import Layout from "@layouts/Layout.astro";
-import MazoSelector from "@components/MazoSelector.astro";
+import VersionSelector from "@components/VersionSelector.astro";
 import CardFilter from "@components/CardFilter.astro";
 import CardViewer from "@components/CardViewer.astro";
-import MazoControls from "@components/MazoControls.astro";
+import VersionControls from "@components/VersionControls.astro";
+import type {
+    Version as VersionType,
+    CartaPersonaje,
+    CartaNegocio,
+    CartaEspecial,
+} from "../models/types";
 import {
-    getMazosFromAPI,
+    getVersionsFromAPI,
     getCartasPersonajeFromAPI,
     getCartasNegocioFromAPI,
     getCartasEspecialesFromAPI,
-    sampleCartaPersonaje,
 } from "@utils/ApiService";
+import { sampleVersion } from "../services/MockData";
 
 // Obtener parámetros de la URL
-const selectedMazoId = Astro.url.searchParams.get("mazo");
+const selectedVersionId = Astro.url.searchParams.get("version");
 const selectedCardType = Astro.url.searchParams.get("type");
 const cardIndexParam = Astro.url.searchParams.get("cardIndex");
 
-// Depuración: Imprimir valores exactos
-console.log("DEBUG: URL completa:", Astro.url.toString());
-console.log("DEBUG: Parámetros crudos:", Astro.url.searchParams.toString());
-console.log(
-    "DEBUG: selectedMazoId:",
-    selectedMazoId,
-    "(tipo:",
-    typeof selectedMazoId,
-    ")",
-);
-console.log(
-    "DEBUG: selectedCardType:",
-    selectedCardType,
-    "(tipo:",
-    typeof selectedCardType,
-    ")",
-);
+let versions: VersionType[] = [sampleVersion];
 
-// Obtener los mazos
-const mazos = await getMazosFromAPI();
-
-// Obtener las cartas según el tipo seleccionado
-let cartas: any[] = [];
-let testResults = "";
-
-if (selectedCardType === "carta-personaje") {
-    cartas = await getCartasPersonajeFromAPI(selectedMazoId);
-} else if (selectedCardType === "carta-negocio") {
-    cartas = await getCartasNegocioFromAPI(selectedMazoId);
-} else if (selectedCardType === "carta-especial") {
-    cartas = await getCartasEspecialesFromAPI(selectedMazoId);
+if (!selectedVersionId) {
+    versions = await getVersionsFromAPI();
 }
 
-// Guardar los resultados para depuración
-if (Array.isArray(cartas)) {
-    testResults = JSON.stringify(cartas, null, 2);
+let cartas: (CartaPersonaje | CartaNegocio | CartaEspecial)[] = [];
+if (selectedCardType === "personaje") {
+    cartas = await getCartasPersonajeFromAPI(selectedVersionId);
+} else if (selectedCardType === "negocio") {
+    cartas = await getCartasNegocioFromAPI(selectedVersionId);
+} else if (selectedCardType === "especial") {
+    cartas = await getCartasEspecialesFromAPI(selectedVersionId);
 }
 
 // Manejar índice de la carta actual
@@ -62,19 +45,11 @@ const maxCardIndex = Array.isArray(cartas) ? cartas.length - 1 : 0;
 
 <Layout>
     <section class="w-full max-w-full overflow-hidden py-8">
-        <!-- {/* Zona de prueba para mostrar los datos de la API */}
-        {
-            testResults && (
-                <div class="bg-gray-100 p-4 mb-8 mx-4 overflow-auto max-h-96 border border-gray-300 rounded">
-                    <h2 class="text-xl font-bold mb-2">
-                        Resultados de prueba API
-                    </h2>
-                    <pre class="text-xs">{testResults}</pre>
-                </div>
-            )
-        } -->
-        <!-- Selector de Mazos -->
-        <MazoSelector mazos={mazos} selectedMazoId={selectedMazoId} />
+        <!-- Selector de Versiones -->
+        <VersionSelector
+            versions={versions}
+            selectedVersionId={selectedVersionId}
+        />
 
         <!-- Card viewer -->
         <div
@@ -82,25 +57,23 @@ const maxCardIndex = Array.isArray(cartas) ? cartas.length - 1 : 0;
         >
             <!-- Filtro de Tipos de Cartas -->
             <CardFilter
-                selectedMazoId={selectedMazoId}
+                selectedVersionId={selectedVersionId}
                 selectedCardType={selectedCardType}
             />
 
             <!-- Visualizador de Cartas -->
             <CardViewer
-                selectedMazoId={selectedMazoId}
+                selectedVersionId={selectedVersionId}
                 selectedCardType={selectedCardType}
                 cartas={cartas}
                 currentCardIndex={currentCardIndex}
             />
         </div>
-        <MazoControls
-            selectedMazoId={selectedMazoId}
+        <VersionControls
+            selectedVersionId={selectedVersionId}
             selectedCardType={selectedCardType}
             currentCardIndex={currentCardIndex}
             maxCardIndex={maxCardIndex}
         />
     </section>
 </Layout>
-
-<!-- La funcionalidad de cliente ahora está distribuida en los componentes individuales -->

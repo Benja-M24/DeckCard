@@ -1,0 +1,434 @@
+---
+import type { Version as VersionType } from "../models/types";
+import type { Room as RoomType } from "../models/types";
+import type { Participant as ParticipantType } from "../models/types";
+
+interface Props {
+    selectedRoomCode: string | null;
+    versions: VersionType[];
+}
+
+const { selectedRoomCode, versions } = Astro.props;
+---
+
+<div
+    class={`w-full max-w-md mx-auto bg-white rounded-xl shadow-md p-6 mb-8 ${selectedRoomCode ? "hidden" : ""}`}
+>
+    <h1 class="text-2xl font-bold self-center px-2 pt-2">Start playing</h1>
+    <p class="px-2 pb-2 text-gray-700 text-sm">
+        Create a room or join an existing one and start playing.
+    </p>
+    <div class="flex justify-between items-center p-2 mb-6">
+        <h2 class="text-lg font-bold">Selector de sala</h2>
+        <div class="flex items-center">
+            <span class="mr-3 text-sm font-medium text-gray-700">Unirse</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="room-toggle" class="sr-only peer" />
+                <div
+                    class="border-1 border-gray-800 w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"
+                >
+                </div>
+            </label>
+            <span class="ml-3 text-sm font-medium text-gray-700">Crear</span>
+        </div>
+    </div>
+
+    <!-- Formulario para unirse a una sala -->
+    <div id="join-room-form" class="mb-4">
+        <div class="mb-4">
+            <label
+                for="player-name"
+                class="block text-sm font-medium text-gray-700 mb-1"
+                >Nombre del jugador</label
+            >
+            <input
+                type="text"
+                id="player-name"
+                placeholder="Nombre del jugador"
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <label
+                for="room-code"
+                class="block text-sm font-medium text-gray-700 mb-1"
+                >Código de sala</label
+            >
+            <input
+                type="text"
+                id="room-code"
+                placeholder="Ingresa el código"
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+        </div>
+        <button
+            type="button"
+            id="join-room"
+            class="w-full bg-amber-600 hover:bg-amber-500 text-white font-medium py-2 px-4 rounded-md transition-colors duration-300"
+        >
+            Unirse a sala
+        </button>
+    </div>
+
+    <!-- Formulario para crear una sala -->
+    <div id="create-room-form" class="hidden mb-4">
+        <div class="mb-4">
+            <label
+                for="admin-name"
+                class="block text-sm font-medium text-gray-700 mb-1"
+                >Nombre del jugador admin</label
+            >
+            <input
+                type="text"
+                id="admin-name"
+                placeholder="Nombre del anfitrion"
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <label
+                for="room-name"
+                class="block text-sm font-medium text-gray-700 mb-1"
+                >Nombre de sala</label
+            >
+            <input
+                type="text"
+                id="room-name"
+                placeholder="Ingresa un nombre para la sala"
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <label
+                for="game-version"
+                class="block text-sm font-medium text-gray-700 mb-1"
+                >Versión</label
+            >
+            <select
+                id="game-version"
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+                {
+                    versions.map(
+                        (version: {
+                            id: string | number;
+                            nombre: string;
+                            version: string | number;
+                        }) => (
+                            <option
+                                class="text-gray-600 text-sm py-1 px-2"
+                                value={version.id}
+                            >
+                                {version.nombre} (V
+                                {version.version})
+                            </option>
+                        ),
+                    )
+                }
+            </select>
+            <label
+                for="players-number"
+                class="block text-sm font-medium text-gray-700 mb-1"
+                >Número de jugadores</label
+            >
+            <input
+                type="number"
+                id="players-number"
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+        </div>
+        <button
+            type="button"
+            id="create-room"
+            class="w-full bg-amber-600 hover:bg-amber-500 text-white font-medium py-2 px-4 rounded-md transition-colors duration-300"
+        >
+            Crear sala
+        </button>
+    </div>
+</div>
+
+<script>
+    import { ApiService } from "../utils/ApiService";
+    import { gameRoomStore, gameRoomActions } from "../stores/gameRoomStore";
+    import type { Room as RoomType } from "../models/types";
+    import type { Participant as ParticipantType } from "../models/types";
+
+    /**
+     * Módulo de Validación de Formularios
+     * Responsable de validar los datos de entrada del usuario
+     */
+    const FormValidator = {
+        validateJoinRoom: (playerName: string, roomCode: string) => {
+            const errors: Record<string, string> = {};
+            if (!playerName.trim()) {
+                errors["playerName"] = "El nombre del jugador es requerido";
+            }
+            if (!roomCode.trim()) {
+                errors["roomCode"] = "El código de la sala es requerido";
+            }
+            return {
+                isValid: Object.keys(errors).length === 0,
+                errors,
+            };
+        },
+
+        validateCreateRoom: (
+            adminName: string,
+            roomName: string,
+            versionId: string,
+            playersNumber: string,
+        ) => {
+            const errors: Record<string, string> = {};
+            if (!adminName.trim()) {
+                errors["adminName"] =
+                    "El nombre del administrador es requerido";
+            }
+            if (!roomName.trim()) {
+                errors["roomName"] = "El nombre de la sala es requerido";
+            }
+            if (!versionId) {
+                errors["versionId"] = "Debe seleccionar una versión";
+            }
+            if (!playersNumber || parseInt(playersNumber) < 2) {
+                errors["playersNumber"] =
+                    "El número de jugadores debe ser al menos 2";
+            }
+            return {
+                isValid: Object.keys(errors).length === 0,
+                errors,
+            };
+        },
+    };
+
+    /**
+     * Módulo de Gestión de UI
+     * Responsable de actualizar la interfaz de usuario
+     */
+    const UIManager = {
+        showError: (elementId: string, message: string) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                // Crear o actualizar mensaje de error
+                let errorElement = document.getElementById(
+                    `${elementId}-error`,
+                );
+                if (!errorElement) {
+                    errorElement = document.createElement("span");
+                    errorElement.id = `${elementId}-error`;
+                    errorElement.className = "text-red-500 text-sm mt-1";
+                    element.parentNode?.insertBefore(
+                        errorElement,
+                        element.nextSibling,
+                    );
+                }
+                errorElement.textContent = message;
+                element.classList.add("border-red-500");
+            }
+        },
+
+        clearError: (elementId: string) => {
+            const element = document.getElementById(elementId);
+            const errorElement = document.getElementById(`${elementId}-error`);
+            if (element) {
+                element.classList.remove("border-red-500");
+            }
+            if (errorElement) {
+                errorElement.remove();
+            }
+        },
+
+        clearErrors: () => {
+            const errorElements = document.querySelectorAll('[id$="-error"]');
+            errorElements.forEach((el) => el.remove());
+            const inputElements = document.querySelectorAll("input, select");
+            inputElements.forEach((el) =>
+                el.classList.remove("border-red-500"),
+            );
+        },
+
+        showFormErrors: (errors: Record<string, string>) => {
+            Object.entries(errors).forEach(([field, message]) => {
+                UIManager.showError(field, message);
+            });
+        },
+    };
+
+    // Manejar el cambio entre formularios de unirse y crear sala
+    document.addEventListener("DOMContentLoaded", () => {
+        // Usamos type assertion para que TypeScript sepa que es un HTMLInputElement
+        const toggle = document.getElementById(
+            "room-toggle",
+        ) as HTMLInputElement;
+        const joinForm = document.getElementById("join-room-form");
+        const createForm = document.getElementById("create-room-form");
+        const joinRoomBtn = document.getElementById("join-room");
+        const createRoomBtn = document.getElementById("create-room");
+
+        // Cambio entre formularios
+        if (toggle && joinForm && createForm) {
+            toggle.addEventListener("change", () => {
+                if (toggle.checked) {
+                    // Mostrar formulario de crear sala
+                    joinForm.classList.add("hidden");
+                    createForm.classList.remove("hidden");
+                } else {
+                    // Mostrar formulario de unirse a sala
+                    joinForm.classList.remove("hidden");
+                    createForm.classList.add("hidden");
+                }
+                UIManager.clearErrors();
+            });
+        }
+
+        // Evento para unirse a una sala
+        if (joinRoomBtn) {
+            joinRoomBtn.addEventListener("click", async () => {
+                UIManager.clearErrors();
+                gameRoomActions.setLoading(true);
+
+                const playerNameInput = document.getElementById(
+                    "player-name",
+                ) as HTMLInputElement;
+                const roomCodeInput = document.getElementById(
+                    "room-code",
+                ) as HTMLInputElement;
+
+                const playerName = playerNameInput?.value || "";
+                const roomCode = roomCodeInput?.value || "";
+
+                // Validar formulario
+                const validation = FormValidator.validateJoinRoom(
+                    playerName,
+                    roomCode,
+                );
+                if (!validation.isValid) {
+                    UIManager.showFormErrors(validation.errors);
+                    gameRoomActions.setLoading(false);
+                    return;
+                }
+
+                try {
+                    // Unirse a la sala
+                    const room = await ApiService.getRoom(roomCode);
+                    if (!room) {
+                        UIManager.showError("room-code", "Sala no encontrada");
+                        gameRoomActions.setLoading(false);
+                        return;
+                    }
+
+                    // Crear participante
+                    // Usamos el código de la sala (code) que es la clave primaria en la DB
+                    const participant = await ApiService.createParticipant(
+                        playerName,
+                        room.code,
+                    );
+
+                    // Guardar ID del participante en sessionStorage
+                    sessionStorage.setItem(
+                        "currentParticipantId",
+                        participant.id.toString(),
+                    );
+
+                    // Actualizar estado global
+                    gameRoomActions.setRoom(room);
+                    gameRoomActions.setParticipant(participant);
+
+                    // Redireccionar a la sala
+                    window.location.href = `/play?Room=${roomCode}`;
+                } catch (error) {
+                    console.error("Error al unirse a la sala:", error);
+                    gameRoomActions.setError("Error al unirse a la sala");
+                } finally {
+                    gameRoomActions.setLoading(false);
+                }
+            });
+        }
+
+        // Evento para crear una sala
+        if (createRoomBtn) {
+            createRoomBtn.addEventListener("click", async () => {
+                UIManager.clearErrors();
+                gameRoomActions.setLoading(true);
+
+                const adminNameInput = document.getElementById(
+                    "admin-name",
+                ) as HTMLInputElement;
+                const roomNameInput = document.getElementById(
+                    "room-name",
+                ) as HTMLInputElement;
+                const versionSelect = document.getElementById(
+                    "game-version",
+                ) as HTMLSelectElement;
+                const playersNumberInput = document.getElementById(
+                    "players-number",
+                ) as HTMLInputElement;
+
+                const adminName = adminNameInput?.value || "";
+                const roomName = roomNameInput?.value || "";
+                const versionId = versionSelect?.value || "";
+                const playersNumber = playersNumberInput?.value || "";
+
+                // Validar formulario
+                const validation = FormValidator.validateCreateRoom(
+                    adminName,
+                    roomName,
+                    versionId,
+                    playersNumber,
+                );
+                if (!validation.isValid) {
+                    UIManager.showFormErrors(validation.errors);
+                    gameRoomActions.setLoading(false);
+                    return;
+                }
+
+                try {
+                    // Primero obtenemos el token CSRF haciendo una petición GET a un endpoint que sí existe
+                    try {
+                        // Obtenemos versiones para que el servidor establezca la cookie CSRF
+                        // Usando la ruta API completa para asegurar que llega al backend
+                        const csrfResponse = await fetch("/api/versions/", {
+                            method: "GET",
+                            credentials: "include",
+                        });
+                        console.log(
+                            "Solicitud para obtener CSRF completada:",
+                            csrfResponse.status,
+                        );
+                    } catch (csrfError) {
+                        console.warn(
+                            "No se pudo obtener el token CSRF:",
+                            csrfError,
+                        );
+                    }
+
+                    // Crear sala
+                    const room = await ApiService.createRoom(
+                        adminName,
+                        roomName,
+                        parseInt(versionId),
+                        parseInt(playersNumber),
+                    );
+
+                    // Crear participante administrador
+                    // Usamos el código de la sala (string) que es la clave primaria en la DB
+                    const participant = await ApiService.createParticipant(
+                        adminName,
+                        room.code,
+                    );
+
+                    // Guardar ID del participante en sessionStorage
+                    sessionStorage.setItem(
+                        "currentParticipantId",
+                        participant.id.toString(),
+                    );
+
+                    // Actualizar estado global
+                    gameRoomActions.setRoom(room);
+                    gameRoomActions.setParticipant(participant);
+
+                    // Redireccionar a la sala
+                    window.location.href = `/play?Room=${room.code}`;
+                } catch (error) {
+                    console.error("Error al crear la sala:", error);
+                    gameRoomActions.setError("Error al crear la sala");
+                } finally {
+                    gameRoomActions.setLoading(false);
+                }
+            });
+        }
+    });
+</script>

@@ -1,5 +1,5 @@
 ---
-import type { CartaPersonaje } from "@utils/ApiService";
+import type { CartaPersonaje } from "../models/types";
 
 interface Props {
   carta: CartaPersonaje;
@@ -8,59 +8,77 @@ interface Props {
 const { carta } = Astro.props;
 ---
 
-<div id="card-personaje" class="p-2 lg:p-4">
-  <h2 class="text-2xl font-bold mb-4">Personaje</h2>
-  <div class="flex justify-center flex-col lg:flex-row gap-6">
-    <div class="flex flex-col items-center w-3/8 lg:items-start gap-2">
-      <img
-        src={carta.imagen}
-        alt={carta.nombre}
-        class="object-cover r border-4 border-amber-600 shadow-lg mb-2"
-      />
-      <h3 class="text-xl font-bold">{carta.nombre}</h3>
-      <p class="text-gray-600 max-w-sm text-center lg:text-left">
-        {carta.descripcion}
-      </p>
-    </div>
-    <div class="flex flex-col gap-3">
-      <div class="text-center md:text-left">
-        <h3 class="text-md text-center font-bold">Historia</h3>
-        <p class="text-sm max-w-md">
-          {carta.historia}
-        </p>
-      </div>
-      <div class="mt-2">
-        <h3 class="text-md text-center font-bold mb-1">Atributos</h3>
-        <div class="grid grid-cols-3 gap-4 mb-4">
-          <div class="text-center">
-            <span class="block text-xl font-bold text-amber-600">
-              ${carta.dinero.toLocaleString()}
-            </span>
-            <span class="text-xs text-gray-600">Dinero</span>
-          </div>
-          <div class="text-center">
-            <span class="block text-xl font-bold text-amber-600">
-              {carta.karma}
-            </span>
-            <span class="text-xs text-gray-600">Karma</span>
-          </div>
-          <div class="text-center">
-            <span class="block text-xl font-bold text-amber-600">
-              {carta.fama}
-            </span>
-            <span class="text-xs text-gray-600">Fama</span>
+<div class="carta-personaje">
+  <div class="p-4">
+    <h2 class="text-2xl font-bold mb-4 text-amber-600">{carta.nombre}</h2>
+    <div class="flex justify-center flex-col lg:flex-row gap-6">
+      <div class="flex-1 flex flex-col items-center">
+        <div class="bg-amber-100 p-4 rounded-lg shadow-md w-full max-w-xs mb-4">
+          {carta.imagen && (
+            <img
+              src={carta.imagen}
+              alt={carta.nombre}
+              class="w-full h-auto object-cover rounded-md border-2 border-amber-300 shadow-md mb-4"
+            />
+          )}
+          <div class="border-2 border-amber-600 p-6 rounded-md">
+            <h3 class="text-xl font-semibold mb-2 text-center">
+              {carta.nombre}
+            </h3>
+            <p class="text-sm mb-4 text-center">{carta.descripcion}</p>
+            <div class="flex justify-center">
+              <span class="inline-block bg-amber-200 text-amber-800 text-xs px-2 py-1 rounded-full">
+                Personaje
+              </span>
+            </div>
           </div>
         </div>
       </div>
-      <div>
-        <h3 class="text-md text-center font-bold mb-1">Habilidades</h3>
-        <ul class="list-disc pl-5 text-sm">
-          {
-            carta.consignas_juego.map((consignas_juego) => (
-              <li>{consignas_juego}</li>
-            ))
-          }
-        </ul>
+      <div class="flex-1 flex flex-col gap-3">
+        <div>
+          <h3 class="text-md text-center font-bold mb-1">Historia</h3>
+          <div class="bg-gray-50 p-3 rounded-md">
+            <p class="text-sm text-gray-700">{carta.historia}</p>
+          </div>
+        </div>
+        <div class="mt-2">
+          <h3 class="text-md text-center font-bold mb-1">Atributos</h3>
+          <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="text-center bg-amber-50 p-2 rounded-md">
+              <span class="block text-xl font-bold text-amber-600">
+                ${carta.dinero.toLocaleString()}
+              </span>
+              <span class="text-xs text-gray-600">Dinero</span>
+            </div>
+            <div class="text-center bg-amber-50 p-2 rounded-md">
+              <span class="block text-xl font-bold text-amber-600">
+                {carta.karma}
+              </span>
+              <span class="text-xs text-gray-600">Karma</span>
+            </div>
+            <div class="text-center bg-amber-50 p-2 rounded-md">
+              <span class="block text-xl font-bold text-amber-600">
+                {carta.fama}
+              </span>
+              <span class="text-xs text-gray-600">Fama</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3 class="text-md text-center font-bold mb-1">Habilidades</h3>
+          <ul class="list-disc pl-5 text-sm text-gray-700 bg-gray-50 p-2 rounded-md">
+            {
+              carta.consignas_juego.map((consigna) => (
+                <li>{consigna}</li>
+              ))
+            }
+          </ul>
+        </div>
+        <div class="mt-4 bg-amber-50 p-3 rounded-md shadow-sm">
+          <p class="text-sm">
+            Versión: <span class="font-semibold">#{carta.version}</span>
+          </p>
+        </div>
       </div>
     </div>
   </div>

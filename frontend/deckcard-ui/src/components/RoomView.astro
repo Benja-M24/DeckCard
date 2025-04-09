@@ -1,0 +1,1988 @@
+---
+import type { Room as RoomType } from "../models/types";
+import type { Participant as ParticipantType } from "../models/types";
+
+interface Props {
+    selectedRoomCode: string | null;
+}
+
+const { selectedRoomCode } = Astro.props;
+---
+
+<div
+    id="room-view"
+    class={`w-full max-w-lg mx-auto bg-white rounded-xl shadow-md p-6 mb-8 ${selectedRoomCode ? "" : "hidden"}`}
+>
+    <div class="mb-4">
+        <h1
+            id="room-title"
+            class="block text-xl font-bold text-gray-800 text-center mb-2"
+        >
+            Test Title
+        </h1>
+        <div
+            class="flex justify-start mx-auto p-2 mb-6 border-1 border-b-2 border-gray-500 rounded-xl shadow-sm"
+        >
+            <div class="flex flex-col w-full sm:flex-row justify-center">
+                <div class="flex flex-col py-0 px-2 sm:py-2 sm:w-1/2 h-full">
+                    <span
+                        id="room-name-span"
+                        class="block text-lg font-medium text-gray-800"
+                        >Test Title</span
+                    >
+                    <label
+                        for="room-name-span"
+                        class="block text-sm font-light text-gray-600 mb-1 border-b-1 border-gray-300"
+                        >Nombre de la sala</label
+                    >
+                    <span
+                        id="room-code-span"
+                        class="block text-lg font-medium text-gray-800"
+                        >#83a7e9</span
+                    >
+                    <label
+                        for="room-code-span"
+                        class="block text-sm font-light text-gray-600 mb-1 border-b-1 border-gray-300"
+                        >Código de la sala
+                    </label>
+                    <span
+                        id="room-version-span"
+                        class="block text-lg font-medium text-gray-800"
+                        >Version: 09
+                    </span>
+                    <label
+                        for="room-version-span"
+                        class="block text-sm font-light text-gray-600 mb-1 border-b-1 border-gray-300"
+                        >Versión del juego</label
+                    >
+                    <div class="block flex-row items-center justify-between">
+                        <span
+                            class="inline-block text-lg font-medium text-gray-800 pr-2"
+                            >Jugadores:
+                        </span>
+                        <samp
+                            id="room-playersIn-span"
+                            class="inline-block text-xl font-bold text-gray-800"
+                            >3</samp
+                        >
+                        <samp
+                            class="inline-block text-xl font-bold text-gray-800"
+                            >/</samp
+                        >
+                        <samp
+                            id="room-playersExpected-span"
+                            class="inline-block text-xl font-bold text-gray-800"
+                            >4</samp
+                        >
+                    </div>
+
+<script>
+    import { ApiService } from "../utils/ApiService";
+    import { gameRoomStore, gameRoomActions } from "../stores/gameRoomStore";
+    import type { Room as RoomType } from "../models/types";
+    import type { Participant as ParticipantType } from "../models/types";
+
+    /**
+     * Módulo de Gestión de UI para la Sala
+     * Responsable de actualizar la interfaz de usuario de la sala
+     */
+    const RoomUIManager = {
+        updateRoomInfo: (room) => {
+            if (!room) return;
+
+            // Actualizar información básica de la sala
+            const roomTitleElement = document.getElementById('room-title');
+            const roomNameElement = document.getElementById('room-name-span');
+            const roomCodeElement = document.getElementById('room-code-span');
+            const roomVersionElement = document.getElementById('room-version-span');
+            const roomPlayersInElement = document.getElementById('room-playersIn-span');
+            const roomPlayersExpectedElement = document.getElementById('room-playersExpected-span');
+            const roomStatusElement = document.getElementById('room-status-span');
+            const roomDateElement = document.getElementById('room-date-span');
+
+            if (roomTitleElement) roomTitleElement.textContent = room.name;
+            if (roomNameElement) roomNameElement.textContent = room.name;
+            if (roomCodeElement) roomCodeElement.textContent = `#${room.code}`;
+            if (roomVersionElement) roomVersionElement.textContent = `Version: ${room.version?.version || 'N/A'}`;
+            
+            // Actualizar contadores de jugadores
+            const participantsCount = room.participants?.length || 0;
+            if (roomPlayersInElement) roomPlayersInElement.textContent = participantsCount.toString();
+            if (roomPlayersExpectedElement) roomPlayersExpectedElement.textContent = room.max_players.toString();
+            
+            // Actualizar estado de la sala
+            if (roomStatusElement) {
+                if (participantsCount < room.max_players) {
+                    roomStatusElement.textContent = 'Esperando jugadores...';
+                } else {
+                    roomStatusElement.textContent = 'Listo para comenzar';
+                }
+            }
+            
+            // Actualizar fecha de creación
+            if (roomDateElement && room.created_at) {
+                const date = new Date(room.created_at);
+                roomDateElement.textContent = date.toLocaleDateString();
+            }
+        },
+
+        updateParticipantsList: (participants) => {
+            if (!participants || !participants.length) return;
+
+            const participantsListElement = document.querySelector('#room-view ul');
+            if (!participantsListElement) return;
+
+            // Limpiar lista actual
+            participantsListElement.innerHTML = '';
+
+            // Colores para los nombres de los participantes
+            const colors = [
+                'text-red-500', 'text-blue-600', 'text-green-600', 'text-purple-600', 
+                'text-amber-600', 'text-indigo-600', 'text-yellow-400'
+            ];
+
+            // Agregar cada participante a la lista
+            participants.forEach((participant, index) => {
+                const colorClass = colors[index % colors.length];
+                const isCurrentUser = participant.id === Number(sessionStorage.getItem('currentParticipantId'));
+                const adminBadge = participant.is_admin ? 
+                    '<span class="ml-1 px-1 py-0.5 bg-amber-100 text-amber-800 text-xs rounded">Admin</span>' : '';
+
+                const li = document.createElement('li');
+                li.className = 'flex flex-row items-center';
+                li.innerHTML = `
+                    <samp class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative">
+                        <span class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"></span>
+                    </samp>
+                    <span class="block text-md font-medium p-1 ${colorClass} ${isCurrentUser ? 'font-bold' : ''}">
+                        ${participant.name} ${adminBadge}
+                    </span>
+                `;
+                participantsListElement.appendChild(li);
+            });
+        },
+
+        updateStartGameButton: (room, currentParticipant) => {
+            const startGameButton = document.getElementById('start-game');
+            if (!startGameButton) return;
+
+            const isAdmin = currentParticipant?.is_admin || false;
+            const hasEnoughPlayers = (room?.participants?.length || 0) >= (room?.max_players || 0);
+
+            // Solo el admin puede iniciar el juego y solo cuando hay suficientes jugadores
+            startGameButton.disabled = !isAdmin || !hasEnoughPlayers;
+            startGameButton.title = !isAdmin ? 'Solo el administrador puede iniciar el juego' : 
+                                  !hasEnoughPlayers ? 'Se necesitan más jugadores para iniciar' : 
+                                  'Iniciar el juego';
+        }
+    };
+
+    // Función para cargar los datos de la sala
+    const loadRoomData = async (roomCode) => {
+        try {
+            gameRoomActions.setLoading(true);
+            gameRoomActions.setError(null);
+
+            // Obtener datos de la sala
+            const room = await ApiService.getRoom(roomCode);
+            if (!room) {
+                gameRoomActions.setError('Sala no encontrada');
+                return null;
+            }
+
+            // Obtener participantes de la sala
+            const participants = await ApiService.getParticipantsByRoom(roomCode);
+            room.participants = participants;
+
+            // Buscar participante actual
+            const participantId = Number(sessionStorage.getItem('currentParticipantId'));
+            const currentParticipant = participants.find(p => p.id === participantId);
+
+            // Actualizar estado global
+            gameRoomActions.setRoom(room);
+            gameRoomActions.setParticipant(currentParticipant || null);
+
+            return { room, currentParticipant };
+        } catch (error) {
+            console.error('Error al cargar datos de la sala:', error);
+            gameRoomActions.setError('Error al cargar datos de la sala');
+            return null;
+        } finally {
+            gameRoomActions.setLoading(false);
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const roomCode = new URLSearchParams(window.location.search).get('Room');
+        const refreshButton = document.getElementById('refresh');
+        const startGameButton = document.getElementById('start-game');
+
+        // Si hay un código de sala, cargar datos
+        if (roomCode) {
+            const result = await loadRoomData(roomCode);
+            if (result) {
+                const { room, currentParticipant } = result;
+                RoomUIManager.updateRoomInfo(room);
+                RoomUIManager.updateParticipantsList(room.participants);
+                RoomUIManager.updateStartGameButton(room, currentParticipant);
+            }
+        }
+
+        // Evento para refrescar la sala
+        if (refreshButton && roomCode) {
+            refreshButton.addEventListener('click', async () => {
+                // Animación de rotación
+                const refreshIcon = document.getElementById('refresh-icon');
+                if (refreshIcon) {
+                    refreshIcon.classList.add('animate-spin');
+                    setTimeout(() => refreshIcon.classList.remove('animate-spin'), 1000);
+                }
+
+                // Recargar datos
+                const result = await loadRoomData(roomCode);
+                if (result) {
+                    const { room, currentParticipant } = result;
+                    RoomUIManager.updateRoomInfo(room);
+                    RoomUIManager.updateParticipantsList(room.participants);
+                    RoomUIManager.updateStartGameButton(room, currentParticipant);
+                }
+            });
+        }
+
+        // Evento para iniciar el juego
+        if (startGameButton && roomCode) {
+            startGameButton.addEventListener('click', async () => {
+                try {
+                    gameRoomActions.setLoading(true);
+                    // Aquí iría la lógica para iniciar el juego
+                    // Por ejemplo: await ApiService.startGame(roomCode);
+                    alert('¡Juego iniciado!');
+                } catch (error) {
+                    console.error('Error al iniciar el juego:', error);
+                    gameRoomActions.setError('Error al iniciar el juego');
+                } finally {
+                    gameRoomActions.setLoading(false);
+                }
+            });
+        }
+
+        // Suscribirse a cambios en el estado global
+        gameRoomStore.subscribe((state) => {
+            if (state.room) {
+                RoomUIManager.updateRoomInfo(state.room);
+                RoomUIManager.updateParticipantsList(state.room.participants);
+                RoomUIManager.updateStartGameButton(state.room, state.participant);
+            }
+        });
+    });
+</script>                    <label
+                        for="room-players-span"
+                        class="block text-sm font-light text-gray-600 mb-1 border-b-1 border-gray-300"
+                        >conectados / necesarios</label
+                    >
+                    <span
+                        id="room-status-span"
+                        class="block text-lg font-medium text-gray-800"
+                        >Esperando jugadores...</span
+                    >
+                    <label
+                        for="room-status-span"
+                        class="block text-sm font-light text-gray-600 mb-1 border-b-1 border-gray-300"
+                        >Status</label
+                    >
+                    <span
+                        id="room-date-span"
+                        class="block text-lg font-medium text-gray-800"
+                        >22/03/2025</span
+                    >
+                    <label
+                        for="room-date-span"
+                        class="block text-sm font-light text-gray-600 mb-1 border-b-1 border-gray-300"
+                        >Fecha de creación</label
+                    >
+                </div>
+
+<script>
+    import { ApiService } from "../utils/ApiService";
+    import { gameRoomStore, gameRoomActions } from "../stores/gameRoomStore";
+    import type { Room as RoomType } from "../models/types";
+    import type { Participant as ParticipantType } from "../models/types";
+
+    /**
+     * Módulo de Gestión de UI para la Sala
+     * Responsable de actualizar la interfaz de usuario de la sala
+     */
+    const RoomUIManager = {
+        updateRoomInfo: (room) => {
+            if (!room) return;
+
+            // Actualizar información básica de la sala
+            const roomTitleElement = document.getElementById('room-title');
+            const roomNameElement = document.getElementById('room-name-span');
+            const roomCodeElement = document.getElementById('room-code-span');
+            const roomVersionElement = document.getElementById('room-version-span');
+            const roomPlayersInElement = document.getElementById('room-playersIn-span');
+            const roomPlayersExpectedElement = document.getElementById('room-playersExpected-span');
+            const roomStatusElement = document.getElementById('room-status-span');
+            const roomDateElement = document.getElementById('room-date-span');
+
+            if (roomTitleElement) roomTitleElement.textContent = room.name;
+            if (roomNameElement) roomNameElement.textContent = room.name;
+            if (roomCodeElement) roomCodeElement.textContent = `#${room.code}`;
+            if (roomVersionElement) roomVersionElement.textContent = `Version: ${room.version?.version || 'N/A'}`;
+            
+            // Actualizar contadores de jugadores
+            const participantsCount = room.participants?.length || 0;
+            if (roomPlayersInElement) roomPlayersInElement.textContent = participantsCount.toString();
+            if (roomPlayersExpectedElement) roomPlayersExpectedElement.textContent = room.max_players.toString();
+            
+            // Actualizar estado de la sala
+            if (roomStatusElement) {
+                if (participantsCount < room.max_players) {
+                    roomStatusElement.textContent = 'Esperando jugadores...';
+                } else {
+                    roomStatusElement.textContent = 'Listo para comenzar';
+                }
+            }
+            
+            // Actualizar fecha de creación
+            if (roomDateElement && room.created_at) {
+                const date = new Date(room.created_at);
+                roomDateElement.textContent = date.toLocaleDateString();
+            }
+        },
+
+        updateParticipantsList: (participants) => {
+            if (!participants || !participants.length) return;
+
+            const participantsListElement = document.querySelector('#room-view ul');
+            if (!participantsListElement) return;
+
+            // Limpiar lista actual
+            participantsListElement.innerHTML = '';
+
+            // Colores para los nombres de los participantes
+            const colors = [
+                'text-red-500', 'text-blue-600', 'text-green-600', 'text-purple-600', 
+                'text-amber-600', 'text-indigo-600', 'text-yellow-400'
+            ];
+
+            // Agregar cada participante a la lista
+            participants.forEach((participant, index) => {
+                const colorClass = colors[index % colors.length];
+                const isCurrentUser = participant.id === Number(sessionStorage.getItem('currentParticipantId'));
+                const adminBadge = participant.is_admin ? 
+                    '<span class="ml-1 px-1 py-0.5 bg-amber-100 text-amber-800 text-xs rounded">Admin</span>' : '';
+
+                const li = document.createElement('li');
+                li.className = 'flex flex-row items-center';
+                li.innerHTML = `
+                    <samp class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative">
+                        <span class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"></span>
+                    </samp>
+                    <span class="block text-md font-medium p-1 ${colorClass} ${isCurrentUser ? 'font-bold' : ''}">
+                        ${participant.name} ${adminBadge}
+                    </span>
+                `;
+                participantsListElement.appendChild(li);
+            });
+        },
+
+        updateStartGameButton: (room, currentParticipant) => {
+            const startGameButton = document.getElementById('start-game');
+            if (!startGameButton) return;
+
+            const isAdmin = currentParticipant?.is_admin || false;
+            const hasEnoughPlayers = (room?.participants?.length || 0) >= (room?.max_players || 0);
+
+            // Solo el admin puede iniciar el juego y solo cuando hay suficientes jugadores
+            startGameButton.disabled = !isAdmin || !hasEnoughPlayers;
+            startGameButton.title = !isAdmin ? 'Solo el administrador puede iniciar el juego' : 
+                                  !hasEnoughPlayers ? 'Se necesitan más jugadores para iniciar' : 
+                                  'Iniciar el juego';
+        }
+    };
+
+    // Función para cargar los datos de la sala
+    const loadRoomData = async (roomCode) => {
+        try {
+            gameRoomActions.setLoading(true);
+            gameRoomActions.setError(null);
+
+            // Obtener datos de la sala
+            const room = await ApiService.getRoom(roomCode);
+            if (!room) {
+                gameRoomActions.setError('Sala no encontrada');
+                return null;
+            }
+
+            // Obtener participantes de la sala
+            const participants = await ApiService.getParticipantsByRoom(roomCode);
+            room.participants = participants;
+
+            // Buscar participante actual
+            const participantId = Number(sessionStorage.getItem('currentParticipantId'));
+            const currentParticipant = participants.find(p => p.id === participantId);
+
+            // Actualizar estado global
+            gameRoomActions.setRoom(room);
+            gameRoomActions.setParticipant(currentParticipant || null);
+
+            return { room, currentParticipant };
+        } catch (error) {
+            console.error('Error al cargar datos de la sala:', error);
+            gameRoomActions.setError('Error al cargar datos de la sala');
+            return null;
+        } finally {
+            gameRoomActions.setLoading(false);
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const roomCode = new URLSearchParams(window.location.search).get('Room');
+        const refreshButton = document.getElementById('refresh');
+        const startGameButton = document.getElementById('start-game');
+
+        // Si hay un código de sala, cargar datos
+        if (roomCode) {
+            const result = await loadRoomData(roomCode);
+            if (result) {
+                const { room, currentParticipant } = result;
+                RoomUIManager.updateRoomInfo(room);
+                RoomUIManager.updateParticipantsList(room.participants);
+                RoomUIManager.updateStartGameButton(room, currentParticipant);
+            }
+        }
+
+        // Evento para refrescar la sala
+        if (refreshButton && roomCode) {
+            refreshButton.addEventListener('click', async () => {
+                // Animación de rotación
+                const refreshIcon = document.getElementById('refresh-icon');
+                if (refreshIcon) {
+                    refreshIcon.classList.add('animate-spin');
+                    setTimeout(() => refreshIcon.classList.remove('animate-spin'), 1000);
+                }
+
+                // Recargar datos
+                const result = await loadRoomData(roomCode);
+                if (result) {
+                    const { room, currentParticipant } = result;
+                    RoomUIManager.updateRoomInfo(room);
+                    RoomUIManager.updateParticipantsList(room.participants);
+                    RoomUIManager.updateStartGameButton(room, currentParticipant);
+                }
+            });
+        }
+
+        // Evento para iniciar el juego
+        if (startGameButton && roomCode) {
+            startGameButton.addEventListener('click', async () => {
+                try {
+                    gameRoomActions.setLoading(true);
+                    // Aquí iría la lógica para iniciar el juego
+                    // Por ejemplo: await ApiService.startGame(roomCode);
+                    alert('¡Juego iniciado!');
+                } catch (error) {
+                    console.error('Error al iniciar el juego:', error);
+                    gameRoomActions.setError('Error al iniciar el juego');
+                } finally {
+                    gameRoomActions.setLoading(false);
+                }
+            });
+        }
+
+        // Suscribirse a cambios en el estado global
+        gameRoomStore.subscribe((state) => {
+            if (state.room) {
+                RoomUIManager.updateRoomInfo(state.room);
+                RoomUIManager.updateParticipantsList(state.room.participants);
+                RoomUIManager.updateStartGameButton(state.room, state.participant);
+            }
+        });
+    });
+</script>                <div class="block flex-col p-2 sm:w-1/2 h-full">
+                    <div
+                        class="flex justify-start mx-auto w-full h-full p-2 mb-6 border-1 border-gray-300 rounded-2xl shadow-sm"
+                    >
+                        <ul class="flex flex-col">
+                            <li class="flex flex-row items-center">
+                                <samp
+                                    class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative"
+                                >
+                                    <span
+                                        class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"
+                                    ></span>
+                                </samp>
+
+                                <span
+                                    class={`block text-md font-medium p-1 ${["text-red-500", "text-blue-600", "text-green-600", "text-purple-600", "text-amber-600", "text-indigo-600", "text-yellow-400"][Math.floor(Math.random() * 7)]}`}
+                                    >Benja Marmol</span
+                                >
+                            </li>
+                            <li class="flex flex-row items-center">
+                                <samp
+                                    class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative"
+                                >
+                                    <span
+                                        class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"
+                                    ></span>
+                                </samp>
+                                <span
+                                    class={`block text-md font-medium p-1 ${["text-red-500", "text-blue-600", "text-green-600", "text-purple-600", "text-amber-600", "text-indigo-600", "text-yellow-400"][Math.floor(Math.random() * 7)]}`}
+                                    >Luis</span
+                                >
+                            </li>
+                            <li class="flex flex-row items-center">
+                                <samp
+                                    class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative"
+                                >
+                                    <span
+                                        class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"
+                                    ></span>
+                                </samp>
+                                <span
+                                    class={`block text-md font-medium p-1 ${["text-red-500", "text-blue-600", "text-green-600", "text-purple-600", "text-amber-600", "text-indigo-600", "text-yellow-400"][Math.floor(Math.random() * 7)]}`}
+                                    >Luis</span
+                                >
+                            </li>
+                        </ul>
+                    </div>
+
+<script>
+    import { ApiService } from "../utils/ApiService";
+    import { gameRoomStore, gameRoomActions } from "../stores/gameRoomStore";
+    import type { Room as RoomType } from "../models/types";
+    import type { Participant as ParticipantType } from "../models/types";
+
+    /**
+     * Módulo de Gestión de UI para la Sala
+     * Responsable de actualizar la interfaz de usuario de la sala
+     */
+    const RoomUIManager = {
+        updateRoomInfo: (room) => {
+            if (!room) return;
+
+            // Actualizar información básica de la sala
+            const roomTitleElement = document.getElementById('room-title');
+            const roomNameElement = document.getElementById('room-name-span');
+            const roomCodeElement = document.getElementById('room-code-span');
+            const roomVersionElement = document.getElementById('room-version-span');
+            const roomPlayersInElement = document.getElementById('room-playersIn-span');
+            const roomPlayersExpectedElement = document.getElementById('room-playersExpected-span');
+            const roomStatusElement = document.getElementById('room-status-span');
+            const roomDateElement = document.getElementById('room-date-span');
+
+            if (roomTitleElement) roomTitleElement.textContent = room.name;
+            if (roomNameElement) roomNameElement.textContent = room.name;
+            if (roomCodeElement) roomCodeElement.textContent = `#${room.code}`;
+            if (roomVersionElement) roomVersionElement.textContent = `Version: ${room.version?.version || 'N/A'}`;
+            
+            // Actualizar contadores de jugadores
+            const participantsCount = room.participants?.length || 0;
+            if (roomPlayersInElement) roomPlayersInElement.textContent = participantsCount.toString();
+            if (roomPlayersExpectedElement) roomPlayersExpectedElement.textContent = room.max_players.toString();
+            
+            // Actualizar estado de la sala
+            if (roomStatusElement) {
+                if (participantsCount < room.max_players) {
+                    roomStatusElement.textContent = 'Esperando jugadores...';
+                } else {
+                    roomStatusElement.textContent = 'Listo para comenzar';
+                }
+            }
+            
+            // Actualizar fecha de creación
+            if (roomDateElement && room.created_at) {
+                const date = new Date(room.created_at);
+                roomDateElement.textContent = date.toLocaleDateString();
+            }
+        },
+
+        updateParticipantsList: (participants) => {
+            if (!participants || !participants.length) return;
+
+            const participantsListElement = document.querySelector('#room-view ul');
+            if (!participantsListElement) return;
+
+            // Limpiar lista actual
+            participantsListElement.innerHTML = '';
+
+            // Colores para los nombres de los participantes
+            const colors = [
+                'text-red-500', 'text-blue-600', 'text-green-600', 'text-purple-600', 
+                'text-amber-600', 'text-indigo-600', 'text-yellow-400'
+            ];
+
+            // Agregar cada participante a la lista
+            participants.forEach((participant, index) => {
+                const colorClass = colors[index % colors.length];
+                const isCurrentUser = participant.id === Number(sessionStorage.getItem('currentParticipantId'));
+                const adminBadge = participant.is_admin ? 
+                    '<span class="ml-1 px-1 py-0.5 bg-amber-100 text-amber-800 text-xs rounded">Admin</span>' : '';
+
+                const li = document.createElement('li');
+                li.className = 'flex flex-row items-center';
+                li.innerHTML = `
+                    <samp class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative">
+                        <span class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"></span>
+                    </samp>
+                    <span class="block text-md font-medium p-1 ${colorClass} ${isCurrentUser ? 'font-bold' : ''}">
+                        ${participant.name} ${adminBadge}
+                    </span>
+                `;
+                participantsListElement.appendChild(li);
+            });
+        },
+
+        updateStartGameButton: (room, currentParticipant) => {
+            const startGameButton = document.getElementById('start-game');
+            if (!startGameButton) return;
+
+            const isAdmin = currentParticipant?.is_admin || false;
+            const hasEnoughPlayers = (room?.participants?.length || 0) >= (room?.max_players || 0);
+
+            // Solo el admin puede iniciar el juego y solo cuando hay suficientes jugadores
+            startGameButton.disabled = !isAdmin || !hasEnoughPlayers;
+            startGameButton.title = !isAdmin ? 'Solo el administrador puede iniciar el juego' : 
+                                  !hasEnoughPlayers ? 'Se necesitan más jugadores para iniciar' : 
+                                  'Iniciar el juego';
+        }
+    };
+
+    // Función para cargar los datos de la sala
+    const loadRoomData = async (roomCode) => {
+        try {
+            gameRoomActions.setLoading(true);
+            gameRoomActions.setError(null);
+
+            // Obtener datos de la sala
+            const room = await ApiService.getRoom(roomCode);
+            if (!room) {
+                gameRoomActions.setError('Sala no encontrada');
+                return null;
+            }
+
+            // Obtener participantes de la sala
+            const participants = await ApiService.getParticipantsByRoom(roomCode);
+            room.participants = participants;
+
+            // Buscar participante actual
+            const participantId = Number(sessionStorage.getItem('currentParticipantId'));
+            const currentParticipant = participants.find(p => p.id === participantId);
+
+            // Actualizar estado global
+            gameRoomActions.setRoom(room);
+            gameRoomActions.setParticipant(currentParticipant || null);
+
+            return { room, currentParticipant };
+        } catch (error) {
+            console.error('Error al cargar datos de la sala:', error);
+            gameRoomActions.setError('Error al cargar datos de la sala');
+            return null;
+        } finally {
+            gameRoomActions.setLoading(false);
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const roomCode = new URLSearchParams(window.location.search).get('Room');
+        const refreshButton = document.getElementById('refresh');
+        const startGameButton = document.getElementById('start-game');
+
+        // Si hay un código de sala, cargar datos
+        if (roomCode) {
+            const result = await loadRoomData(roomCode);
+            if (result) {
+                const { room, currentParticipant } = result;
+                RoomUIManager.updateRoomInfo(room);
+                RoomUIManager.updateParticipantsList(room.participants);
+                RoomUIManager.updateStartGameButton(room, currentParticipant);
+            }
+        }
+
+        // Evento para refrescar la sala
+        if (refreshButton && roomCode) {
+            refreshButton.addEventListener('click', async () => {
+                // Animación de rotación
+                const refreshIcon = document.getElementById('refresh-icon');
+                if (refreshIcon) {
+                    refreshIcon.classList.add('animate-spin');
+                    setTimeout(() => refreshIcon.classList.remove('animate-spin'), 1000);
+                }
+
+                // Recargar datos
+                const result = await loadRoomData(roomCode);
+                if (result) {
+                    const { room, currentParticipant } = result;
+                    RoomUIManager.updateRoomInfo(room);
+                    RoomUIManager.updateParticipantsList(room.participants);
+                    RoomUIManager.updateStartGameButton(room, currentParticipant);
+                }
+            });
+        }
+
+        // Evento para iniciar el juego
+        if (startGameButton && roomCode) {
+            startGameButton.addEventListener('click', async () => {
+                try {
+                    gameRoomActions.setLoading(true);
+                    // Aquí iría la lógica para iniciar el juego
+                    // Por ejemplo: await ApiService.startGame(roomCode);
+                    alert('¡Juego iniciado!');
+                } catch (error) {
+                    console.error('Error al iniciar el juego:', error);
+                    gameRoomActions.setError('Error al iniciar el juego');
+                } finally {
+                    gameRoomActions.setLoading(false);
+                }
+            });
+        }
+
+        // Suscribirse a cambios en el estado global
+        gameRoomStore.subscribe((state) => {
+            if (state.room) {
+                RoomUIManager.updateRoomInfo(state.room);
+                RoomUIManager.updateParticipantsList(state.room.participants);
+                RoomUIManager.updateStartGameButton(state.room, state.participant);
+            }
+        });
+    });
+</script>                </div>
+
+<script>
+    import { ApiService } from "../utils/ApiService";
+    import { gameRoomStore, gameRoomActions } from "../stores/gameRoomStore";
+    import type { Room as RoomType } from "../models/types";
+    import type { Participant as ParticipantType } from "../models/types";
+
+    /**
+     * Módulo de Gestión de UI para la Sala
+     * Responsable de actualizar la interfaz de usuario de la sala
+     */
+    const RoomUIManager = {
+        updateRoomInfo: (room) => {
+            if (!room) return;
+
+            // Actualizar información básica de la sala
+            const roomTitleElement = document.getElementById('room-title');
+            const roomNameElement = document.getElementById('room-name-span');
+            const roomCodeElement = document.getElementById('room-code-span');
+            const roomVersionElement = document.getElementById('room-version-span');
+            const roomPlayersInElement = document.getElementById('room-playersIn-span');
+            const roomPlayersExpectedElement = document.getElementById('room-playersExpected-span');
+            const roomStatusElement = document.getElementById('room-status-span');
+            const roomDateElement = document.getElementById('room-date-span');
+
+            if (roomTitleElement) roomTitleElement.textContent = room.name;
+            if (roomNameElement) roomNameElement.textContent = room.name;
+            if (roomCodeElement) roomCodeElement.textContent = `#${room.code}`;
+            if (roomVersionElement) roomVersionElement.textContent = `Version: ${room.version?.version || 'N/A'}`;
+            
+            // Actualizar contadores de jugadores
+            const participantsCount = room.participants?.length || 0;
+            if (roomPlayersInElement) roomPlayersInElement.textContent = participantsCount.toString();
+            if (roomPlayersExpectedElement) roomPlayersExpectedElement.textContent = room.max_players.toString();
+            
+            // Actualizar estado de la sala
+            if (roomStatusElement) {
+                if (participantsCount < room.max_players) {
+                    roomStatusElement.textContent = 'Esperando jugadores...';
+                } else {
+                    roomStatusElement.textContent = 'Listo para comenzar';
+                }
+            }
+            
+            // Actualizar fecha de creación
+            if (roomDateElement && room.created_at) {
+                const date = new Date(room.created_at);
+                roomDateElement.textContent = date.toLocaleDateString();
+            }
+        },
+
+        updateParticipantsList: (participants) => {
+            if (!participants || !participants.length) return;
+
+            const participantsListElement = document.querySelector('#room-view ul');
+            if (!participantsListElement) return;
+
+            // Limpiar lista actual
+            participantsListElement.innerHTML = '';
+
+            // Colores para los nombres de los participantes
+            const colors = [
+                'text-red-500', 'text-blue-600', 'text-green-600', 'text-purple-600', 
+                'text-amber-600', 'text-indigo-600', 'text-yellow-400'
+            ];
+
+            // Agregar cada participante a la lista
+            participants.forEach((participant, index) => {
+                const colorClass = colors[index % colors.length];
+                const isCurrentUser = participant.id === Number(sessionStorage.getItem('currentParticipantId'));
+                const adminBadge = participant.is_admin ? 
+                    '<span class="ml-1 px-1 py-0.5 bg-amber-100 text-amber-800 text-xs rounded">Admin</span>' : '';
+
+                const li = document.createElement('li');
+                li.className = 'flex flex-row items-center';
+                li.innerHTML = `
+                    <samp class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative">
+                        <span class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"></span>
+                    </samp>
+                    <span class="block text-md font-medium p-1 ${colorClass} ${isCurrentUser ? 'font-bold' : ''}">
+                        ${participant.name} ${adminBadge}
+                    </span>
+                `;
+                participantsListElement.appendChild(li);
+            });
+        },
+
+        updateStartGameButton: (room, currentParticipant) => {
+            const startGameButton = document.getElementById('start-game');
+            if (!startGameButton) return;
+
+            const isAdmin = currentParticipant?.is_admin || false;
+            const hasEnoughPlayers = (room?.participants?.length || 0) >= (room?.max_players || 0);
+
+            // Solo el admin puede iniciar el juego y solo cuando hay suficientes jugadores
+            startGameButton.disabled = !isAdmin || !hasEnoughPlayers;
+            startGameButton.title = !isAdmin ? 'Solo el administrador puede iniciar el juego' : 
+                                  !hasEnoughPlayers ? 'Se necesitan más jugadores para iniciar' : 
+                                  'Iniciar el juego';
+        }
+    };
+
+    // Función para cargar los datos de la sala
+    const loadRoomData = async (roomCode) => {
+        try {
+            gameRoomActions.setLoading(true);
+            gameRoomActions.setError(null);
+
+            // Obtener datos de la sala
+            const room = await ApiService.getRoom(roomCode);
+            if (!room) {
+                gameRoomActions.setError('Sala no encontrada');
+                return null;
+            }
+
+            // Obtener participantes de la sala
+            const participants = await ApiService.getParticipantsByRoom(roomCode);
+            room.participants = participants;
+
+            // Buscar participante actual
+            const participantId = Number(sessionStorage.getItem('currentParticipantId'));
+            const currentParticipant = participants.find(p => p.id === participantId);
+
+            // Actualizar estado global
+            gameRoomActions.setRoom(room);
+            gameRoomActions.setParticipant(currentParticipant || null);
+
+            return { room, currentParticipant };
+        } catch (error) {
+            console.error('Error al cargar datos de la sala:', error);
+            gameRoomActions.setError('Error al cargar datos de la sala');
+            return null;
+        } finally {
+            gameRoomActions.setLoading(false);
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const roomCode = new URLSearchParams(window.location.search).get('Room');
+        const refreshButton = document.getElementById('refresh');
+        const startGameButton = document.getElementById('start-game');
+
+        // Si hay un código de sala, cargar datos
+        if (roomCode) {
+            const result = await loadRoomData(roomCode);
+            if (result) {
+                const { room, currentParticipant } = result;
+                RoomUIManager.updateRoomInfo(room);
+                RoomUIManager.updateParticipantsList(room.participants);
+                RoomUIManager.updateStartGameButton(room, currentParticipant);
+            }
+        }
+
+        // Evento para refrescar la sala
+        if (refreshButton && roomCode) {
+            refreshButton.addEventListener('click', async () => {
+                // Animación de rotación
+                const refreshIcon = document.getElementById('refresh-icon');
+                if (refreshIcon) {
+                    refreshIcon.classList.add('animate-spin');
+                    setTimeout(() => refreshIcon.classList.remove('animate-spin'), 1000);
+                }
+
+                // Recargar datos
+                const result = await loadRoomData(roomCode);
+                if (result) {
+                    const { room, currentParticipant } = result;
+                    RoomUIManager.updateRoomInfo(room);
+                    RoomUIManager.updateParticipantsList(room.participants);
+                    RoomUIManager.updateStartGameButton(room, currentParticipant);
+                }
+            });
+        }
+
+        // Evento para iniciar el juego
+        if (startGameButton && roomCode) {
+            startGameButton.addEventListener('click', async () => {
+                try {
+                    gameRoomActions.setLoading(true);
+                    // Aquí iría la lógica para iniciar el juego
+                    // Por ejemplo: await ApiService.startGame(roomCode);
+                    alert('¡Juego iniciado!');
+                } catch (error) {
+                    console.error('Error al iniciar el juego:', error);
+                    gameRoomActions.setError('Error al iniciar el juego');
+                } finally {
+                    gameRoomActions.setLoading(false);
+                }
+            });
+        }
+
+        // Suscribirse a cambios en el estado global
+        gameRoomStore.subscribe((state) => {
+            if (state.room) {
+                RoomUIManager.updateRoomInfo(state.room);
+                RoomUIManager.updateParticipantsList(state.room.participants);
+                RoomUIManager.updateStartGameButton(state.room, state.participant);
+            }
+        });
+    });
+</script>            </div>
+
+<script>
+    import { ApiService } from "../utils/ApiService";
+    import { gameRoomStore, gameRoomActions } from "../stores/gameRoomStore";
+    import type { Room as RoomType } from "../models/types";
+    import type { Participant as ParticipantType } from "../models/types";
+
+    /**
+     * Módulo de Gestión de UI para la Sala
+     * Responsable de actualizar la interfaz de usuario de la sala
+     */
+    const RoomUIManager = {
+        updateRoomInfo: (room) => {
+            if (!room) return;
+
+            // Actualizar información básica de la sala
+            const roomTitleElement = document.getElementById('room-title');
+            const roomNameElement = document.getElementById('room-name-span');
+            const roomCodeElement = document.getElementById('room-code-span');
+            const roomVersionElement = document.getElementById('room-version-span');
+            const roomPlayersInElement = document.getElementById('room-playersIn-span');
+            const roomPlayersExpectedElement = document.getElementById('room-playersExpected-span');
+            const roomStatusElement = document.getElementById('room-status-span');
+            const roomDateElement = document.getElementById('room-date-span');
+
+            if (roomTitleElement) roomTitleElement.textContent = room.name;
+            if (roomNameElement) roomNameElement.textContent = room.name;
+            if (roomCodeElement) roomCodeElement.textContent = `#${room.code}`;
+            if (roomVersionElement) roomVersionElement.textContent = `Version: ${room.version?.version || 'N/A'}`;
+            
+            // Actualizar contadores de jugadores
+            const participantsCount = room.participants?.length || 0;
+            if (roomPlayersInElement) roomPlayersInElement.textContent = participantsCount.toString();
+            if (roomPlayersExpectedElement) roomPlayersExpectedElement.textContent = room.max_players.toString();
+            
+            // Actualizar estado de la sala
+            if (roomStatusElement) {
+                if (participantsCount < room.max_players) {
+                    roomStatusElement.textContent = 'Esperando jugadores...';
+                } else {
+                    roomStatusElement.textContent = 'Listo para comenzar';
+                }
+            }
+            
+            // Actualizar fecha de creación
+            if (roomDateElement && room.created_at) {
+                const date = new Date(room.created_at);
+                roomDateElement.textContent = date.toLocaleDateString();
+            }
+        },
+
+        updateParticipantsList: (participants) => {
+            if (!participants || !participants.length) return;
+
+            const participantsListElement = document.querySelector('#room-view ul');
+            if (!participantsListElement) return;
+
+            // Limpiar lista actual
+            participantsListElement.innerHTML = '';
+
+            // Colores para los nombres de los participantes
+            const colors = [
+                'text-red-500', 'text-blue-600', 'text-green-600', 'text-purple-600', 
+                'text-amber-600', 'text-indigo-600', 'text-yellow-400'
+            ];
+
+            // Agregar cada participante a la lista
+            participants.forEach((participant, index) => {
+                const colorClass = colors[index % colors.length];
+                const isCurrentUser = participant.id === Number(sessionStorage.getItem('currentParticipantId'));
+                const adminBadge = participant.is_admin ? 
+                    '<span class="ml-1 px-1 py-0.5 bg-amber-100 text-amber-800 text-xs rounded">Admin</span>' : '';
+
+                const li = document.createElement('li');
+                li.className = 'flex flex-row items-center';
+                li.innerHTML = `
+                    <samp class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative">
+                        <span class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"></span>
+                    </samp>
+                    <span class="block text-md font-medium p-1 ${colorClass} ${isCurrentUser ? 'font-bold' : ''}">
+                        ${participant.name} ${adminBadge}
+                    </span>
+                `;
+                participantsListElement.appendChild(li);
+            });
+        },
+
+        updateStartGameButton: (room, currentParticipant) => {
+            const startGameButton = document.getElementById('start-game');
+            if (!startGameButton) return;
+
+            const isAdmin = currentParticipant?.is_admin || false;
+            const hasEnoughPlayers = (room?.participants?.length || 0) >= (room?.max_players || 0);
+
+            // Solo el admin puede iniciar el juego y solo cuando hay suficientes jugadores
+            startGameButton.disabled = !isAdmin || !hasEnoughPlayers;
+            startGameButton.title = !isAdmin ? 'Solo el administrador puede iniciar el juego' : 
+                                  !hasEnoughPlayers ? 'Se necesitan más jugadores para iniciar' : 
+                                  'Iniciar el juego';
+        }
+    };
+
+    // Función para cargar los datos de la sala
+    const loadRoomData = async (roomCode) => {
+        try {
+            gameRoomActions.setLoading(true);
+            gameRoomActions.setError(null);
+
+            // Obtener datos de la sala
+            const room = await ApiService.getRoom(roomCode);
+            if (!room) {
+                gameRoomActions.setError('Sala no encontrada');
+                return null;
+            }
+
+            // Obtener participantes de la sala
+            const participants = await ApiService.getParticipantsByRoom(roomCode);
+            room.participants = participants;
+
+            // Buscar participante actual
+            const participantId = Number(sessionStorage.getItem('currentParticipantId'));
+            const currentParticipant = participants.find(p => p.id === participantId);
+
+            // Actualizar estado global
+            gameRoomActions.setRoom(room);
+            gameRoomActions.setParticipant(currentParticipant || null);
+
+            return { room, currentParticipant };
+        } catch (error) {
+            console.error('Error al cargar datos de la sala:', error);
+            gameRoomActions.setError('Error al cargar datos de la sala');
+            return null;
+        } finally {
+            gameRoomActions.setLoading(false);
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const roomCode = new URLSearchParams(window.location.search).get('Room');
+        const refreshButton = document.getElementById('refresh');
+        const startGameButton = document.getElementById('start-game');
+
+        // Si hay un código de sala, cargar datos
+        if (roomCode) {
+            const result = await loadRoomData(roomCode);
+            if (result) {
+                const { room, currentParticipant } = result;
+                RoomUIManager.updateRoomInfo(room);
+                RoomUIManager.updateParticipantsList(room.participants);
+                RoomUIManager.updateStartGameButton(room, currentParticipant);
+            }
+        }
+
+        // Evento para refrescar la sala
+        if (refreshButton && roomCode) {
+            refreshButton.addEventListener('click', async () => {
+                // Animación de rotación
+                const refreshIcon = document.getElementById('refresh-icon');
+                if (refreshIcon) {
+                    refreshIcon.classList.add('animate-spin');
+                    setTimeout(() => refreshIcon.classList.remove('animate-spin'), 1000);
+                }
+
+                // Recargar datos
+                const result = await loadRoomData(roomCode);
+                if (result) {
+                    const { room, currentParticipant } = result;
+                    RoomUIManager.updateRoomInfo(room);
+                    RoomUIManager.updateParticipantsList(room.participants);
+                    RoomUIManager.updateStartGameButton(room, currentParticipant);
+                }
+            });
+        }
+
+        // Evento para iniciar el juego
+        if (startGameButton && roomCode) {
+            startGameButton.addEventListener('click', async () => {
+                try {
+                    gameRoomActions.setLoading(true);
+                    // Aquí iría la lógica para iniciar el juego
+                    // Por ejemplo: await ApiService.startGame(roomCode);
+                    alert('¡Juego iniciado!');
+                } catch (error) {
+                    console.error('Error al iniciar el juego:', error);
+                    gameRoomActions.setError('Error al iniciar el juego');
+                } finally {
+                    gameRoomActions.setLoading(false);
+                }
+            });
+        }
+
+        // Suscribirse a cambios en el estado global
+        gameRoomStore.subscribe((state) => {
+            if (state.room) {
+                RoomUIManager.updateRoomInfo(state.room);
+                RoomUIManager.updateParticipantsList(state.room.participants);
+                RoomUIManager.updateStartGameButton(state.room, state.participant);
+            }
+        });
+    });
+</script>        </div>
+
+<script>
+    import { ApiService } from "../utils/ApiService";
+    import { gameRoomStore, gameRoomActions } from "../stores/gameRoomStore";
+    import type { Room as RoomType } from "../models/types";
+    import type { Participant as ParticipantType } from "../models/types";
+
+    /**
+     * Módulo de Gestión de UI para la Sala
+     * Responsable de actualizar la interfaz de usuario de la sala
+     */
+    const RoomUIManager = {
+        updateRoomInfo: (room) => {
+            if (!room) return;
+
+            // Actualizar información básica de la sala
+            const roomTitleElement = document.getElementById('room-title');
+            const roomNameElement = document.getElementById('room-name-span');
+            const roomCodeElement = document.getElementById('room-code-span');
+            const roomVersionElement = document.getElementById('room-version-span');
+            const roomPlayersInElement = document.getElementById('room-playersIn-span');
+            const roomPlayersExpectedElement = document.getElementById('room-playersExpected-span');
+            const roomStatusElement = document.getElementById('room-status-span');
+            const roomDateElement = document.getElementById('room-date-span');
+
+            if (roomTitleElement) roomTitleElement.textContent = room.name;
+            if (roomNameElement) roomNameElement.textContent = room.name;
+            if (roomCodeElement) roomCodeElement.textContent = `#${room.code}`;
+            if (roomVersionElement) roomVersionElement.textContent = `Version: ${room.version?.version || 'N/A'}`;
+            
+            // Actualizar contadores de jugadores
+            const participantsCount = room.participants?.length || 0;
+            if (roomPlayersInElement) roomPlayersInElement.textContent = participantsCount.toString();
+            if (roomPlayersExpectedElement) roomPlayersExpectedElement.textContent = room.max_players.toString();
+            
+            // Actualizar estado de la sala
+            if (roomStatusElement) {
+                if (participantsCount < room.max_players) {
+                    roomStatusElement.textContent = 'Esperando jugadores...';
+                } else {
+                    roomStatusElement.textContent = 'Listo para comenzar';
+                }
+            }
+            
+            // Actualizar fecha de creación
+            if (roomDateElement && room.created_at) {
+                const date = new Date(room.created_at);
+                roomDateElement.textContent = date.toLocaleDateString();
+            }
+        },
+
+        updateParticipantsList: (participants) => {
+            if (!participants || !participants.length) return;
+
+            const participantsListElement = document.querySelector('#room-view ul');
+            if (!participantsListElement) return;
+
+            // Limpiar lista actual
+            participantsListElement.innerHTML = '';
+
+            // Colores para los nombres de los participantes
+            const colors = [
+                'text-red-500', 'text-blue-600', 'text-green-600', 'text-purple-600', 
+                'text-amber-600', 'text-indigo-600', 'text-yellow-400'
+            ];
+
+            // Agregar cada participante a la lista
+            participants.forEach((participant, index) => {
+                const colorClass = colors[index % colors.length];
+                const isCurrentUser = participant.id === Number(sessionStorage.getItem('currentParticipantId'));
+                const adminBadge = participant.is_admin ? 
+                    '<span class="ml-1 px-1 py-0.5 bg-amber-100 text-amber-800 text-xs rounded">Admin</span>' : '';
+
+                const li = document.createElement('li');
+                li.className = 'flex flex-row items-center';
+                li.innerHTML = `
+                    <samp class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative">
+                        <span class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"></span>
+                    </samp>
+                    <span class="block text-md font-medium p-1 ${colorClass} ${isCurrentUser ? 'font-bold' : ''}">
+                        ${participant.name} ${adminBadge}
+                    </span>
+                `;
+                participantsListElement.appendChild(li);
+            });
+        },
+
+        updateStartGameButton: (room, currentParticipant) => {
+            const startGameButton = document.getElementById('start-game');
+            if (!startGameButton) return;
+
+            const isAdmin = currentParticipant?.is_admin || false;
+            const hasEnoughPlayers = (room?.participants?.length || 0) >= (room?.max_players || 0);
+
+            // Solo el admin puede iniciar el juego y solo cuando hay suficientes jugadores
+            startGameButton.disabled = !isAdmin || !hasEnoughPlayers;
+            startGameButton.title = !isAdmin ? 'Solo el administrador puede iniciar el juego' : 
+                                  !hasEnoughPlayers ? 'Se necesitan más jugadores para iniciar' : 
+                                  'Iniciar el juego';
+        }
+    };
+
+    // Función para cargar los datos de la sala
+    const loadRoomData = async (roomCode) => {
+        try {
+            gameRoomActions.setLoading(true);
+            gameRoomActions.setError(null);
+
+            // Obtener datos de la sala
+            const room = await ApiService.getRoom(roomCode);
+            if (!room) {
+                gameRoomActions.setError('Sala no encontrada');
+                return null;
+            }
+
+            // Obtener participantes de la sala
+            const participants = await ApiService.getParticipantsByRoom(roomCode);
+            room.participants = participants;
+
+            // Buscar participante actual
+            const participantId = Number(sessionStorage.getItem('currentParticipantId'));
+            const currentParticipant = participants.find(p => p.id === participantId);
+
+            // Actualizar estado global
+            gameRoomActions.setRoom(room);
+            gameRoomActions.setParticipant(currentParticipant || null);
+
+            return { room, currentParticipant };
+        } catch (error) {
+            console.error('Error al cargar datos de la sala:', error);
+            gameRoomActions.setError('Error al cargar datos de la sala');
+            return null;
+        } finally {
+            gameRoomActions.setLoading(false);
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const roomCode = new URLSearchParams(window.location.search).get('Room');
+        const refreshButton = document.getElementById('refresh');
+        const startGameButton = document.getElementById('start-game');
+
+        // Si hay un código de sala, cargar datos
+        if (roomCode) {
+            const result = await loadRoomData(roomCode);
+            if (result) {
+                const { room, currentParticipant } = result;
+                RoomUIManager.updateRoomInfo(room);
+                RoomUIManager.updateParticipantsList(room.participants);
+                RoomUIManager.updateStartGameButton(room, currentParticipant);
+            }
+        }
+
+        // Evento para refrescar la sala
+        if (refreshButton && roomCode) {
+            refreshButton.addEventListener('click', async () => {
+                // Animación de rotación
+                const refreshIcon = document.getElementById('refresh-icon');
+                if (refreshIcon) {
+                    refreshIcon.classList.add('animate-spin');
+                    setTimeout(() => refreshIcon.classList.remove('animate-spin'), 1000);
+                }
+
+                // Recargar datos
+                const result = await loadRoomData(roomCode);
+                if (result) {
+                    const { room, currentParticipant } = result;
+                    RoomUIManager.updateRoomInfo(room);
+                    RoomUIManager.updateParticipantsList(room.participants);
+                    RoomUIManager.updateStartGameButton(room, currentParticipant);
+                }
+            });
+        }
+
+        // Evento para iniciar el juego
+        if (startGameButton && roomCode) {
+            startGameButton.addEventListener('click', async () => {
+                try {
+                    gameRoomActions.setLoading(true);
+                    // Aquí iría la lógica para iniciar el juego
+                    // Por ejemplo: await ApiService.startGame(roomCode);
+                    alert('¡Juego iniciado!');
+                } catch (error) {
+                    console.error('Error al iniciar el juego:', error);
+                    gameRoomActions.setError('Error al iniciar el juego');
+                } finally {
+                    gameRoomActions.setLoading(false);
+                }
+            });
+        }
+
+        // Suscribirse a cambios en el estado global
+        gameRoomStore.subscribe((state) => {
+            if (state.room) {
+                RoomUIManager.updateRoomInfo(state.room);
+                RoomUIManager.updateParticipantsList(state.room.participants);
+                RoomUIManager.updateStartGameButton(state.room, state.participant);
+            }
+        });
+    });
+</script>    </div>
+
+<script>
+    import { ApiService } from "../utils/ApiService";
+    import { gameRoomStore, gameRoomActions } from "../stores/gameRoomStore";
+    import type { Room as RoomType } from "../models/types";
+    import type { Participant as ParticipantType } from "../models/types";
+
+    /**
+     * Módulo de Gestión de UI para la Sala
+     * Responsable de actualizar la interfaz de usuario de la sala
+     */
+    const RoomUIManager = {
+        updateRoomInfo: (room) => {
+            if (!room) return;
+
+            // Actualizar información básica de la sala
+            const roomTitleElement = document.getElementById('room-title');
+            const roomNameElement = document.getElementById('room-name-span');
+            const roomCodeElement = document.getElementById('room-code-span');
+            const roomVersionElement = document.getElementById('room-version-span');
+            const roomPlayersInElement = document.getElementById('room-playersIn-span');
+            const roomPlayersExpectedElement = document.getElementById('room-playersExpected-span');
+            const roomStatusElement = document.getElementById('room-status-span');
+            const roomDateElement = document.getElementById('room-date-span');
+
+            if (roomTitleElement) roomTitleElement.textContent = room.name;
+            if (roomNameElement) roomNameElement.textContent = room.name;
+            if (roomCodeElement) roomCodeElement.textContent = `#${room.code}`;
+            if (roomVersionElement) roomVersionElement.textContent = `Version: ${room.version?.version || 'N/A'}`;
+            
+            // Actualizar contadores de jugadores
+            const participantsCount = room.participants?.length || 0;
+            if (roomPlayersInElement) roomPlayersInElement.textContent = participantsCount.toString();
+            if (roomPlayersExpectedElement) roomPlayersExpectedElement.textContent = room.max_players.toString();
+            
+            // Actualizar estado de la sala
+            if (roomStatusElement) {
+                if (participantsCount < room.max_players) {
+                    roomStatusElement.textContent = 'Esperando jugadores...';
+                } else {
+                    roomStatusElement.textContent = 'Listo para comenzar';
+                }
+            }
+            
+            // Actualizar fecha de creación
+            if (roomDateElement && room.created_at) {
+                const date = new Date(room.created_at);
+                roomDateElement.textContent = date.toLocaleDateString();
+            }
+        },
+
+        updateParticipantsList: (participants) => {
+            if (!participants || !participants.length) return;
+
+            const participantsListElement = document.querySelector('#room-view ul');
+            if (!participantsListElement) return;
+
+            // Limpiar lista actual
+            participantsListElement.innerHTML = '';
+
+            // Colores para los nombres de los participantes
+            const colors = [
+                'text-red-500', 'text-blue-600', 'text-green-600', 'text-purple-600', 
+                'text-amber-600', 'text-indigo-600', 'text-yellow-400'
+            ];
+
+            // Agregar cada participante a la lista
+            participants.forEach((participant, index) => {
+                const colorClass = colors[index % colors.length];
+                const isCurrentUser = participant.id === Number(sessionStorage.getItem('currentParticipantId'));
+                const adminBadge = participant.is_admin ? 
+                    '<span class="ml-1 px-1 py-0.5 bg-amber-100 text-amber-800 text-xs rounded">Admin</span>' : '';
+
+                const li = document.createElement('li');
+                li.className = 'flex flex-row items-center';
+                li.innerHTML = `
+                    <samp class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative">
+                        <span class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"></span>
+                    </samp>
+                    <span class="block text-md font-medium p-1 ${colorClass} ${isCurrentUser ? 'font-bold' : ''}">
+                        ${participant.name} ${adminBadge}
+                    </span>
+                `;
+                participantsListElement.appendChild(li);
+            });
+        },
+
+        updateStartGameButton: (room, currentParticipant) => {
+            const startGameButton = document.getElementById('start-game');
+            if (!startGameButton) return;
+
+            const isAdmin = currentParticipant?.is_admin || false;
+            const hasEnoughPlayers = (room?.participants?.length || 0) >= (room?.max_players || 0);
+
+            // Solo el admin puede iniciar el juego y solo cuando hay suficientes jugadores
+            startGameButton.disabled = !isAdmin || !hasEnoughPlayers;
+            startGameButton.title = !isAdmin ? 'Solo el administrador puede iniciar el juego' : 
+                                  !hasEnoughPlayers ? 'Se necesitan más jugadores para iniciar' : 
+                                  'Iniciar el juego';
+        }
+    };
+
+    // Función para cargar los datos de la sala
+    const loadRoomData = async (roomCode) => {
+        try {
+            gameRoomActions.setLoading(true);
+            gameRoomActions.setError(null);
+
+            // Obtener datos de la sala
+            const room = await ApiService.getRoom(roomCode);
+            if (!room) {
+                gameRoomActions.setError('Sala no encontrada');
+                return null;
+            }
+
+            // Obtener participantes de la sala
+            const participants = await ApiService.getParticipantsByRoom(roomCode);
+            room.participants = participants;
+
+            // Buscar participante actual
+            const participantId = Number(sessionStorage.getItem('currentParticipantId'));
+            const currentParticipant = participants.find(p => p.id === participantId);
+
+            // Actualizar estado global
+            gameRoomActions.setRoom(room);
+            gameRoomActions.setParticipant(currentParticipant || null);
+
+            return { room, currentParticipant };
+        } catch (error) {
+            console.error('Error al cargar datos de la sala:', error);
+            gameRoomActions.setError('Error al cargar datos de la sala');
+            return null;
+        } finally {
+            gameRoomActions.setLoading(false);
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const roomCode = new URLSearchParams(window.location.search).get('Room');
+        const refreshButton = document.getElementById('refresh');
+        const startGameButton = document.getElementById('start-game');
+
+        // Si hay un código de sala, cargar datos
+        if (roomCode) {
+            const result = await loadRoomData(roomCode);
+            if (result) {
+                const { room, currentParticipant } = result;
+                RoomUIManager.updateRoomInfo(room);
+                RoomUIManager.updateParticipantsList(room.participants);
+                RoomUIManager.updateStartGameButton(room, currentParticipant);
+            }
+        }
+
+        // Evento para refrescar la sala
+        if (refreshButton && roomCode) {
+            refreshButton.addEventListener('click', async () => {
+                // Animación de rotación
+                const refreshIcon = document.getElementById('refresh-icon');
+                if (refreshIcon) {
+                    refreshIcon.classList.add('animate-spin');
+                    setTimeout(() => refreshIcon.classList.remove('animate-spin'), 1000);
+                }
+
+                // Recargar datos
+                const result = await loadRoomData(roomCode);
+                if (result) {
+                    const { room, currentParticipant } = result;
+                    RoomUIManager.updateRoomInfo(room);
+                    RoomUIManager.updateParticipantsList(room.participants);
+                    RoomUIManager.updateStartGameButton(room, currentParticipant);
+                }
+            });
+        }
+
+        // Evento para iniciar el juego
+        if (startGameButton && roomCode) {
+            startGameButton.addEventListener('click', async () => {
+                try {
+                    gameRoomActions.setLoading(true);
+                    // Aquí iría la lógica para iniciar el juego
+                    // Por ejemplo: await ApiService.startGame(roomCode);
+                    alert('¡Juego iniciado!');
+                } catch (error) {
+                    console.error('Error al iniciar el juego:', error);
+                    gameRoomActions.setError('Error al iniciar el juego');
+                } finally {
+                    gameRoomActions.setLoading(false);
+                }
+            });
+        }
+
+        // Suscribirse a cambios en el estado global
+        gameRoomStore.subscribe((state) => {
+            if (state.room) {
+                RoomUIManager.updateRoomInfo(state.room);
+                RoomUIManager.updateParticipantsList(state.room.participants);
+                RoomUIManager.updateStartGameButton(state.room, state.participant);
+            }
+        });
+    });
+</script>    <div
+        class="flex flex-row h-full w-full justify-center items-center p-2 mb-4"
+    >
+        <button
+            type="button"
+            id="start-game"
+            class="w-9/10 h-full flex items-center justify-center bg-amber-600 hover:bg-amber-500 text-white font-medium py-2 px-4 mx-2 rounded-md transition-colors duration-300 disabled:opacity-50 not-active:opacity-50 not-active:cursor-not-allowed"
+        >
+            Comenzar juego
+        </button>
+        <button
+            type="button"
+            id="refresh"
+            class="w-1/10 flex items-center justify-center bg-amber-600 hover:bg-amber-500 text-white font-medium py-2 px-4 mx-2 rounded-md transition-colors duration-300"
+        >
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                id="refresh-icon"
+                class="flex justify-center items-center w-6 h-6 transition-transform duration-2000 ease-in-out"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                ></path>
+            </svg>
+        </button>
+    </div>
+
+<script>
+    import { ApiService } from "../utils/ApiService";
+    import { gameRoomStore, gameRoomActions } from "../stores/gameRoomStore";
+    import type { Room as RoomType } from "../models/types";
+    import type { Participant as ParticipantType } from "../models/types";
+
+    /**
+     * Módulo de Gestión de UI para la Sala
+     * Responsable de actualizar la interfaz de usuario de la sala
+     */
+    const RoomUIManager = {
+        updateRoomInfo: (room) => {
+            if (!room) return;
+
+            // Actualizar información básica de la sala
+            const roomTitleElement = document.getElementById('room-title');
+            const roomNameElement = document.getElementById('room-name-span');
+            const roomCodeElement = document.getElementById('room-code-span');
+            const roomVersionElement = document.getElementById('room-version-span');
+            const roomPlayersInElement = document.getElementById('room-playersIn-span');
+            const roomPlayersExpectedElement = document.getElementById('room-playersExpected-span');
+            const roomStatusElement = document.getElementById('room-status-span');
+            const roomDateElement = document.getElementById('room-date-span');
+
+            if (roomTitleElement) roomTitleElement.textContent = room.name;
+            if (roomNameElement) roomNameElement.textContent = room.name;
+            if (roomCodeElement) roomCodeElement.textContent = `#${room.code}`;
+            if (roomVersionElement) roomVersionElement.textContent = `Version: ${room.version?.version || 'N/A'}`;
+            
+            // Actualizar contadores de jugadores
+            const participantsCount = room.participants?.length || 0;
+            if (roomPlayersInElement) roomPlayersInElement.textContent = participantsCount.toString();
+            if (roomPlayersExpectedElement) roomPlayersExpectedElement.textContent = room.max_players.toString();
+            
+            // Actualizar estado de la sala
+            if (roomStatusElement) {
+                if (participantsCount < room.max_players) {
+                    roomStatusElement.textContent = 'Esperando jugadores...';
+                } else {
+                    roomStatusElement.textContent = 'Listo para comenzar';
+                }
+            }
+            
+            // Actualizar fecha de creación
+            if (roomDateElement && room.created_at) {
+                const date = new Date(room.created_at);
+                roomDateElement.textContent = date.toLocaleDateString();
+            }
+        },
+
+        updateParticipantsList: (participants) => {
+            if (!participants || !participants.length) return;
+
+            const participantsListElement = document.querySelector('#room-view ul');
+            if (!participantsListElement) return;
+
+            // Limpiar lista actual
+            participantsListElement.innerHTML = '';
+
+            // Colores para los nombres de los participantes
+            const colors = [
+                'text-red-500', 'text-blue-600', 'text-green-600', 'text-purple-600', 
+                'text-amber-600', 'text-indigo-600', 'text-yellow-400'
+            ];
+
+            // Agregar cada participante a la lista
+            participants.forEach((participant, index) => {
+                const colorClass = colors[index % colors.length];
+                const isCurrentUser = participant.id === Number(sessionStorage.getItem('currentParticipantId'));
+                const adminBadge = participant.is_admin ? 
+                    '<span class="ml-1 px-1 py-0.5 bg-amber-100 text-amber-800 text-xs rounded">Admin</span>' : '';
+
+                const li = document.createElement('li');
+                li.className = 'flex flex-row items-center';
+                li.innerHTML = `
+                    <samp class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative">
+                        <span class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"></span>
+                    </samp>
+                    <span class="block text-md font-medium p-1 ${colorClass} ${isCurrentUser ? 'font-bold' : ''}">
+                        ${participant.name} ${adminBadge}
+                    </span>
+                `;
+                participantsListElement.appendChild(li);
+            });
+        },
+
+        updateStartGameButton: (room, currentParticipant) => {
+            const startGameButton = document.getElementById('start-game');
+            if (!startGameButton) return;
+
+            const isAdmin = currentParticipant?.is_admin || false;
+            const hasEnoughPlayers = (room?.participants?.length || 0) >= (room?.max_players || 0);
+
+            // Solo el admin puede iniciar el juego y solo cuando hay suficientes jugadores
+            startGameButton.disabled = !isAdmin || !hasEnoughPlayers;
+            startGameButton.title = !isAdmin ? 'Solo el administrador puede iniciar el juego' : 
+                                  !hasEnoughPlayers ? 'Se necesitan más jugadores para iniciar' : 
+                                  'Iniciar el juego';
+        }
+    };
+
+    // Función para cargar los datos de la sala
+    const loadRoomData = async (roomCode) => {
+        try {
+            gameRoomActions.setLoading(true);
+            gameRoomActions.setError(null);
+
+            // Obtener datos de la sala
+            const room = await ApiService.getRoom(roomCode);
+            if (!room) {
+                gameRoomActions.setError('Sala no encontrada');
+                return null;
+            }
+
+            // Obtener participantes de la sala
+            const participants = await ApiService.getParticipantsByRoom(roomCode);
+            room.participants = participants;
+
+            // Buscar participante actual
+            const participantId = Number(sessionStorage.getItem('currentParticipantId'));
+            const currentParticipant = participants.find(p => p.id === participantId);
+
+            // Actualizar estado global
+            gameRoomActions.setRoom(room);
+            gameRoomActions.setParticipant(currentParticipant || null);
+
+            return { room, currentParticipant };
+        } catch (error) {
+            console.error('Error al cargar datos de la sala:', error);
+            gameRoomActions.setError('Error al cargar datos de la sala');
+            return null;
+        } finally {
+            gameRoomActions.setLoading(false);
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const roomCode = new URLSearchParams(window.location.search).get('Room');
+        const refreshButton = document.getElementById('refresh');
+        const startGameButton = document.getElementById('start-game');
+
+        // Si hay un código de sala, cargar datos
+        if (roomCode) {
+            const result = await loadRoomData(roomCode);
+            if (result) {
+                const { room, currentParticipant } = result;
+                RoomUIManager.updateRoomInfo(room);
+                RoomUIManager.updateParticipantsList(room.participants);
+                RoomUIManager.updateStartGameButton(room, currentParticipant);
+            }
+        }
+
+        // Evento para refrescar la sala
+        if (refreshButton && roomCode) {
+            refreshButton.addEventListener('click', async () => {
+                // Animación de rotación
+                const refreshIcon = document.getElementById('refresh-icon');
+                if (refreshIcon) {
+                    refreshIcon.classList.add('animate-spin');
+                    setTimeout(() => refreshIcon.classList.remove('animate-spin'), 1000);
+                }
+
+                // Recargar datos
+                const result = await loadRoomData(roomCode);
+                if (result) {
+                    const { room, currentParticipant } = result;
+                    RoomUIManager.updateRoomInfo(room);
+                    RoomUIManager.updateParticipantsList(room.participants);
+                    RoomUIManager.updateStartGameButton(room, currentParticipant);
+                }
+            });
+        }
+
+        // Evento para iniciar el juego
+        if (startGameButton && roomCode) {
+            startGameButton.addEventListener('click', async () => {
+                try {
+                    gameRoomActions.setLoading(true);
+                    // Aquí iría la lógica para iniciar el juego
+                    // Por ejemplo: await ApiService.startGame(roomCode);
+                    alert('¡Juego iniciado!');
+                } catch (error) {
+                    console.error('Error al iniciar el juego:', error);
+                    gameRoomActions.setError('Error al iniciar el juego');
+                } finally {
+                    gameRoomActions.setLoading(false);
+                }
+            });
+        }
+
+        // Suscribirse a cambios en el estado global
+        gameRoomStore.subscribe((state) => {
+            if (state.room) {
+                RoomUIManager.updateRoomInfo(state.room);
+                RoomUIManager.updateParticipantsList(state.room.participants);
+                RoomUIManager.updateStartGameButton(state.room, state.participant);
+            }
+        });
+    });
+</script></div>
+
+<script>
+    import { ApiService } from "../utils/ApiService";
+    import { gameRoomStore, gameRoomActions } from "../stores/gameRoomStore";
+    import type { Room as RoomType } from "../models/types";
+    import type { Participant as ParticipantType } from "../models/types";
+
+    /**
+     * Módulo de Gestión de UI para la Sala
+     * Responsable de actualizar la interfaz de usuario de la sala
+     */
+    const RoomUIManager = {
+        updateRoomInfo: (room) => {
+            if (!room) return;
+
+            // Actualizar información básica de la sala
+            const roomTitleElement = document.getElementById('room-title');
+            const roomNameElement = document.getElementById('room-name-span');
+            const roomCodeElement = document.getElementById('room-code-span');
+            const roomVersionElement = document.getElementById('room-version-span');
+            const roomPlayersInElement = document.getElementById('room-playersIn-span');
+            const roomPlayersExpectedElement = document.getElementById('room-playersExpected-span');
+            const roomStatusElement = document.getElementById('room-status-span');
+            const roomDateElement = document.getElementById('room-date-span');
+
+            if (roomTitleElement) roomTitleElement.textContent = room.name;
+            if (roomNameElement) roomNameElement.textContent = room.name;
+            if (roomCodeElement) roomCodeElement.textContent = `#${room.code}`;
+            if (roomVersionElement) roomVersionElement.textContent = `Version: ${room.version?.version || 'N/A'}`;
+            
+            // Actualizar contadores de jugadores
+            const participantsCount = room.participants?.length || 0;
+            if (roomPlayersInElement) roomPlayersInElement.textContent = participantsCount.toString();
+            if (roomPlayersExpectedElement) roomPlayersExpectedElement.textContent = room.max_players.toString();
+            
+            // Actualizar estado de la sala
+            if (roomStatusElement) {
+                if (participantsCount < room.max_players) {
+                    roomStatusElement.textContent = 'Esperando jugadores...';
+                } else {
+                    roomStatusElement.textContent = 'Listo para comenzar';
+                }
+            }
+            
+            // Actualizar fecha de creación
+            if (roomDateElement && room.created_at) {
+                const date = new Date(room.created_at);
+                roomDateElement.textContent = date.toLocaleDateString();
+            }
+        },
+
+        updateParticipantsList: (participants) => {
+            if (!participants || !participants.length) return;
+
+            const participantsListElement = document.querySelector('#room-view ul');
+            if (!participantsListElement) return;
+
+            // Limpiar lista actual
+            participantsListElement.innerHTML = '';
+
+            // Colores para los nombres de los participantes
+            const colors = [
+                'text-red-500', 'text-blue-600', 'text-green-600', 'text-purple-600', 
+                'text-amber-600', 'text-indigo-600', 'text-yellow-400'
+            ];
+
+            // Agregar cada participante a la lista
+            participants.forEach((participant, index) => {
+                const colorClass = colors[index % colors.length];
+                const isCurrentUser = participant.id === Number(sessionStorage.getItem('currentParticipantId'));
+                const adminBadge = participant.is_admin ? 
+                    '<span class="ml-1 px-1 py-0.5 bg-amber-100 text-amber-800 text-xs rounded">Admin</span>' : '';
+
+                const li = document.createElement('li');
+                li.className = 'flex flex-row items-center';
+                li.innerHTML = `
+                    <samp class="hover:before:content-['Conectado'] hover:before:absolute hover:before:bg-gray-500 hover:before:text-white hover:before:text-xs hover:before:py-1 hover:before:px-2 hover:before:rounded hover:before:-translate-y-6 hover:before:opacity-0 hover:before:transition-opacity hover:before:duration-300 hover:hover:before:opacity-100 relative">
+                        <span class="inline-block h-2 w-2 rounded-full bg-green-600 animate-pulse mr-1"></span>
+                    </samp>
+                    <span class="block text-md font-medium p-1 ${colorClass} ${isCurrentUser ? 'font-bold' : ''}">
+                        ${participant.name} ${adminBadge}
+                    </span>
+                `;
+                participantsListElement.appendChild(li);
+            });
+        },
+
+        updateStartGameButton: (room, currentParticipant) => {
+            const startGameButton = document.getElementById('start-game');
+            if (!startGameButton) return;
+
+            const isAdmin = currentParticipant?.is_admin || false;
+            const hasEnoughPlayers = (room?.participants?.length || 0) >= (room?.max_players || 0);
+
+            // Solo el admin puede iniciar el juego y solo cuando hay suficientes jugadores
+            startGameButton.disabled = !isAdmin || !hasEnoughPlayers;
+            startGameButton.title = !isAdmin ? 'Solo el administrador puede iniciar el juego' : 
+                                  !hasEnoughPlayers ? 'Se necesitan más jugadores para iniciar' : 
+                                  'Iniciar el juego';
+        }
+    };
+
+    // Función para cargar los datos de la sala
+    const loadRoomData = async (roomCode) => {
+        try {
+            gameRoomActions.setLoading(true);
+            gameRoomActions.setError(null);
+
+            // Obtener datos de la sala
+            const room = await ApiService.getRoom(roomCode);
+            if (!room) {
+                gameRoomActions.setError('Sala no encontrada');
+                return null;
+            }
+
+            // Obtener participantes de la sala
+            const participants = await ApiService.getParticipantsByRoom(roomCode);
+            room.participants = participants;
+
+            // Buscar participante actual
+            const participantId = Number(sessionStorage.getItem('currentParticipantId'));
+            const currentParticipant = participants.find(p => p.id === participantId);
+
+            // Actualizar estado global
+            gameRoomActions.setRoom(room);
+            gameRoomActions.setParticipant(currentParticipant || null);
+
+            return { room, currentParticipant };
+        } catch (error) {
+            console.error('Error al cargar datos de la sala:', error);
+            gameRoomActions.setError('Error al cargar datos de la sala');
+            return null;
+        } finally {
+            gameRoomActions.setLoading(false);
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const roomCode = new URLSearchParams(window.location.search).get('Room');
+        const refreshButton = document.getElementById('refresh');
+        const startGameButton = document.getElementById('start-game');
+
+        // Si hay un código de sala, cargar datos
+        if (roomCode) {
+            const result = await loadRoomData(roomCode);
+            if (result) {
+                const { room, currentParticipant } = result;
+                RoomUIManager.updateRoomInfo(room);
+                RoomUIManager.updateParticipantsList(room.participants);
+                RoomUIManager.updateStartGameButton(room, currentParticipant);
+            }
+        }
+
+        // Evento para refrescar la sala
+        if (refreshButton && roomCode) {
+            refreshButton.addEventListener('click', async () => {
+                // Animación de rotación
+                const refreshIcon = document.getElementById('refresh-icon');
+                if (refreshIcon) {
+                    refreshIcon.classList.add('animate-spin');
+                    setTimeout(() => refreshIcon.classList.remove('animate-spin'), 1000);
+                }
+
+                // Recargar datos
+                const result = await loadRoomData(roomCode);
+                if (result) {
+                    const { room, currentParticipant } = result;
+                    RoomUIManager.updateRoomInfo(room);
+                    RoomUIManager.updateParticipantsList(room.participants);
+                    RoomUIManager.updateStartGameButton(room, currentParticipant);
+                }
+            });
+        }
+
+        // Evento para iniciar el juego
+        if (startGameButton && roomCode) {
+            startGameButton.addEventListener('click', async () => {
+                try {
+                    gameRoomActions.setLoading(true);
+                    // Aquí iría la lógica para iniciar el juego
+                    // Por ejemplo: await ApiService.startGame(roomCode);
+                    alert('¡Juego iniciado!');
+                } catch (error) {
+                    console.error('Error al iniciar el juego:', error);
+                    gameRoomActions.setError('Error al iniciar el juego');
+                } finally {
+                    gameRoomActions.setLoading(false);
+                }
+            });
+        }
+
+        // Suscribirse a cambios en el estado global
+        gameRoomStore.subscribe((state) => {
+            if (state.room) {
+                RoomUIManager.updateRoomInfo(state.room);
+                RoomUIManager.updateParticipantsList(state.room.participants);
+                RoomUIManager.updateStartGameButton(state.room, state.participant);
+            }
+        });
+    });
+</script>

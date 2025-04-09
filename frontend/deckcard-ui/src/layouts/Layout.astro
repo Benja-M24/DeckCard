@@ -6,6 +6,8 @@ interface Props {
 	title?: string;
 }
 
+// Obtener nonce desde la variable global para CSP
+const nonce = globalThis.nonce;
 const { title = "DeckCard" } = Astro.props;
 ---
 
@@ -32,6 +34,10 @@ const { title = "DeckCard" } = Astro.props;
 		<meta name="author" content="BM" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<title>{title}</title>
+		<!-- Script para exponer el nonce a la aplicación cliente -->
+		<script nonce={nonce} define:vars={{ nonce }}>
+			window.nonce = nonce;
+		</script>
 	</head>
 	<body class="flex flex-col min-h-screen bg-gray-300">
 		<header

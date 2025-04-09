@@ -5,24 +5,43 @@ import json
 import secrets
 import string
 
-class Mazo(models.Model):
+class Version(models.Model):
     """
-    Modelo para representar un mazo de cartas.
+    Modelo para representar una versión de cartas.
     """
     nombre = models.CharField(max_length=100, verbose_name="Nombre")
     version = models.CharField(max_length=20, verbose_name="Versión")
     fecha_creacion = models.DateTimeField(default=timezone.now, verbose_name="Fecha de creación")
+    
+    # Variable para establecer la versión por defecto para nuevas cartas
+    DEFAULT_VERSION_ID = 3
+    
+    @classmethod
+    def get_default_version(cls):
+        # No podemos retornar directamente DEFAULT_VERSION_ID porque necesitamos
+        # el objeto Version completo, no solo su ID.
+        # Ejemplo incorrecto:
+        #   return cls.DEFAULT_VERSION_ID  # Esto retornaría solo el número 3, no el objeto Version
+        
+        # Necesitamos hacer una consulta a la base de datos para obtener
+        # el objeto Version completo con todos sus atributos
+        # Ejemplo correcto:
+        try:
+            return cls.objects.get(id=cls.DEFAULT_VERSION_ID)
+        except cls.DoesNotExist:
+            # Fallback to first version if default doesn't exist
+            return cls.objects.first()
 
     class Meta:
-        verbose_name = "Mazo"
-        verbose_name_plural = "Mazos"
+        verbose_name = "Versión"
+        verbose_name_plural = "Versiones"
         ordering = ['fecha_creacion']
 
     def __str__(self):
         return f"{self.nombre} (v{self.version})"
     
     def mezclar_mazo(self):
-        """Método para mezclar las cartas del mazo"""
+        """Método para mezclar las cartas de la versión"""
         # Implementación de la mezcla (será desarrollada posteriormente)
         pass
     
@@ -32,70 +51,80 @@ class Mazo(models.Model):
         pass
     
     def tomar_carta(self):
-        """Método para tomar la siguiente carta del mazo"""
+        """Método para tomar la siguiente carta de la versión"""
         # Implementación para tomar carta (será desarrollada posteriormente)
         pass
+    
 
-class NivelDeNegocio(models.Model):
+class business_upgrade(models.Model):
     """
     Modelo para representar niveles de negocio para las cartas de negocios.
     """
-    n_nivel = models.PositiveIntegerField(verbose_name="Número de nivel")
+    upgrade_name = models.CharField(max_length=30, verbose_name="Nombre de mejora")
     n_wachines_necesarios = models.PositiveIntegerField(verbose_name="Número de trabajadores necesarios")
-    costo_mejora = models.PositiveIntegerField(verbose_name="Costo de mejora", validators=[MinValueValidator(1), MaxValueValidator(100)])
-    plus_de_beneficio = models.FloatField(verbose_name="Plus de beneficio", validators=[MinValueValidator(0.1), MaxValueValidator(100)])
+    costo_mejora = models.PositiveIntegerField(verbose_name="Costo de mejora", validators=[MinValueValidator(1), MaxValueValidator(100000)])
+    version = models.ForeignKey(Version, on_delete=models.PROTECT, null=False, blank=False, related_name='business_upgrades', verbose_name="Versión", default=Version.DEFAULT_VERSION_ID)
     
     class Meta:
-        verbose_name = "Nivel de negocio"
-        verbose_name_plural = "Niveles de negocio"
-        ordering = ['n_nivel']
+        verbose_name = "Mejora de negocio"
+        verbose_name_plural = "Mejoras de negocio"
+        ordering = ['upgrade_name']
     
     def __str__(self):
-        return f"Nivel {self.n_nivel} (Trabajadores: {self.n_wachines_necesarios})"
+        return f"{self.upgrade_name} (Trabajadores: {self.n_wachines_necesarios} | Costo: {self.costo_mejora})"
 
-class TipoDeNegocio(models.Model):
+class business_industry(models.Model):
     """
-    Modelo para representar tipos de negocio para las cartas de negocios.
+    Modelo para representar los distinto rubros para las cartas de negocios.
     """
-    nombre = models.CharField(max_length=50, verbose_name="Nombre")
+    industry_name = models.CharField(max_length=20, verbose_name="Nombre")
     
     class Meta:
-        verbose_name = "Tipo de negocio"
-        verbose_name_plural = "Tipos de negocio"
-        ordering = ['nombre']
+        verbose_name = "Rubro de negocio"
+        verbose_name_plural = "Rubros de negocio"
+        ordering = ['industry_name']
     
     def __str__(self):
-        return self.nombre
+        return self.industry_name
 
 class CartaNegocio(models.Model):
     """
     Modelo para representar cartas de negocios.
     """
+    business_class_choices = [
+        ('Bronze', 'Bronce'),
+        ('Silver', 'Plata'),
+        ('Gold', 'Oro'),
+        ('Platinum', 'Platino')
+    ]
+    
     nombre = models.CharField(max_length=100, verbose_name="Nombre")
     frase = models.CharField(max_length=200, blank=True, verbose_name="Frase")
     precio = models.PositiveIntegerField(
         default=3600,
         verbose_name="Precio del Negocio",
         validators=[
-            MinValueValidator(1, message='El precio no puede ser negativo'),
-            MaxValueValidator(100, message='Límite máximo: $ 100')
+            MinValueValidator(1000, message='El precio no puede ser negativo'),
+            MaxValueValidator(1000000, message='Límite máximo: $ 1000000')
         ]
     )
-    niveles_soportados = models.ManyToManyField(NivelDeNegocio, related_name='cartas', verbose_name="Niveles soportados")
+    business_class_name = models.CharField(max_length=20, choices=business_class_choices, default='Bronze', verbose_name="Clase")
+    business_upgrade = models.ManyToManyField(business_upgrade, related_name='business_cards', verbose_name="Mejoras disponibles")
+    business_industry = models.ForeignKey(business_industry, on_delete=models.PROTECT, null=True, blank=True, related_name='business_cards', verbose_name="Rubro de Negocio")
     beneficio_base = models.IntegerField(
-        default=5,
+        default=180,
         verbose_name="beneficio base",
         validators=[
-            MinValueValidator(1, message='Beneficio base minimo 1'),
-            MaxValueValidator(10, message='Beneficio base limite 10')
+            MinValueValidator(100, message='Beneficio base minimo 100'),
+            MaxValueValidator(100000, message='Beneficio base limite 100000')
         ]
     )
-    beneficio_final = models.IntegerField(
-        default=5,
+    beneficio_mejorado = models.IntegerField(
+        default=250,
         verbose_name="beneficio final",
         validators=[
-            MinValueValidator(1, message='Beneficio final minimo 1'),
-            MaxValueValidator(10, message='Beneficio final limite 10')
+            MinValueValidator(100, message='Beneficio final minimo 100'),
+            MaxValueValidator(100000, message='Beneficio final limite 100000')
         ]
     )
     consignas_juego = models.JSONField(
@@ -107,9 +136,7 @@ class CartaNegocio(models.Model):
             MaxLengthValidator(5)
         ]   
     )
-    
-    tipo = models.ForeignKey(TipoDeNegocio, on_delete=models.PROTECT, null=False, blank=False, related_name='cartas_negocio', verbose_name="Tipo de Negocio")
-    mazo = models.ForeignKey(Mazo, on_delete=models.PROTECT, null=False, blank=False, related_name='cartas_negocio', verbose_name="Mazo")
+    version = models.ForeignKey(Version, on_delete=models.PROTECT, null=False, blank=False, related_name='cartas_negocio', verbose_name="Versión", default=Version.DEFAULT_VERSION_ID)
 
     class Meta:
         verbose_name = "Carta de negocio"
@@ -117,14 +144,6 @@ class CartaNegocio(models.Model):
     
     def __str__(self):
         return self.nombre
-    
-    def get_beneficios_por_turno(self):
-        """Retorna los beneficios por turno como una lista"""
-        return json.loads(self.beneficios_por_turno)
-    
-    def set_beneficios_por_turno(self, beneficios_lista):
-        """Guarda los beneficios por turno como JSON"""
-        self.beneficios_por_turno = json.dumps(beneficios_lista)
 
 class CartaPersonaje(models.Model):
     """
@@ -175,12 +194,7 @@ class CartaPersonaje(models.Model):
             self.consignas_juego = []
         self.consignas_juego.append(consigna.strip())
 
-    # @property
-    # def reglas_formateadas(self) -> list[str]:
-    #     """Devuelve las reglas listas para mostrar en frontend"""
-    #     return [f"• {regla}" for regla in self.atributos_juego] if self.atributos_juego else []
-
-    mazo = models.ForeignKey(Mazo, on_delete=models.PROTECT, null=False, blank=False, related_name='cartas_personaje', verbose_name="Mazo")
+    version = models.ForeignKey(Version, on_delete=models.PROTECT, null=False, blank=False, related_name='cartas_personaje', verbose_name="Versión", default=Version.DEFAULT_VERSION_ID)
     
     class Meta:
         verbose_name = "Carta de personaje"
@@ -205,11 +219,60 @@ class CartaEspecial(models.Model):
         ]
     )
     imagen = models.ImageField(upload_to='especiales/', blank=True, null=True, verbose_name="Imagen")
-    mazo = models.ForeignKey(Mazo, related_name='cartas_especiales', on_delete=models.PROTECT, null=False, blank=False, verbose_name="Mazo")
+    version = models.ForeignKey(Version, related_name='cartas_especiales', on_delete=models.PROTECT, null=False, blank=False, verbose_name="Versión", default=Version.DEFAULT_VERSION_ID)
     
     class Meta:
         verbose_name = "Carta especial"
         verbose_name_plural = "Cartas especiales"
+    
+    def __str__(self):
+        return self.titulo
+
+class CartaEvento(models.Model):
+    """
+    Modelo para representar cartas de evento.
+    """
+    titulo = models.CharField(max_length=100, verbose_name="Título")
+    frase = models.CharField(max_length=200, verbose_name="Frase")
+    consignas_juego = models.JSONField(
+        default=list,
+        blank=True,
+        null=True,
+        verbose_name="Consignas de Carta Especial",
+        validators=[
+            MaxLengthValidator(5)
+        ]
+    )
+    imagen = models.ImageField(upload_to='eventos/', blank=True, null=True, verbose_name="Imagen")
+    version = models.ForeignKey(Version, related_name='cartas_eventos', on_delete=models.PROTECT, null=False, blank=False, verbose_name="Versión", default=Version.DEFAULT_VERSION_ID)
+    
+    class Meta:
+        verbose_name = "Carta de evento"
+        verbose_name_plural = "Cartas de evento"
+    
+    def __str__(self):
+        return self.titulo
+
+class CartaObjetivo(models.Model):
+    """
+    Modelo para representar cartas de objetivo.
+    """
+    titulo = models.CharField(max_length=100, verbose_name="Título")
+    consignas_juego = models.TextField(
+        default="Conquista todas las panaderias.",
+        blank=True,
+        null=True,
+        verbose_name="Consignas de Carta Especial",
+        validators=[
+            MaxLengthValidator(5)
+        ]
+    )
+    imagen = models.ImageField(upload_to='objetivos/', blank=True, null=True, verbose_name="Imagen")
+    version = models.ForeignKey(Version, related_name='cartas_objetivos', on_delete=models.PROTECT, null=False, blank=False, verbose_name="Versión", default=Version.DEFAULT_VERSION_ID)
+    
+    class Meta:
+        verbose_name = "Carta de objetivo"
+        verbose_name_plural = "Cartas de objetivo"
     
     def __str__(self):
         return self.titulo
@@ -246,7 +309,7 @@ class Room(models.Model):
     # Código único hexadecimal de 6 caracteres para la sala
     code = models.CharField(max_length=6, primary_key=True, default=generate_room_code, verbose_name="Código de sala")
     name = models.CharField(max_length=100, verbose_name="Nombre de la sala")
-    mazo = models.ForeignKey(Mazo, on_delete=models.PROTECT, related_name='rooms', verbose_name="Mazo")
+    version = models.ForeignKey(Version, on_delete=models.PROTECT, null=True, blank=True, related_name='rooms', verbose_name="Versión")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='created', verbose_name="Estado")
     fecha_creacion = models.DateTimeField(default=timezone.now, verbose_name="Fecha de creación")
     max_participants = models.PositiveIntegerField(default=6, validators=[MinValueValidator(2), MaxValueValidator(10)], verbose_name="Máximo de participantes")

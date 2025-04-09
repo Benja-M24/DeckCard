@@ -16,8 +16,7 @@ services:
       - traefik.http.routers.DeckCard-front-https.tls=true
       - traefik.http.routers.DeckCard-front-https.tls.certresolver=le
       - traefik.http.routers.DeckCard-front-https.service=front-DeckCard-service
-      # - traefik.http.routers.DeckCard-front-https.middlewares=security-headers@docker,admin-auth@docker
-      - traefik.http.routers.DeckCard-front-https.middlewares=security-headers@docker
+      - traefik.http.routers.DeckCard-front-https.middlewares=security-headers@docker,admin-auth@docker
 
       - traefik.http.services.front-DeckCard-service.loadbalancer.server.port=3300
     networks:
@@ -26,7 +25,10 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - PUBLIC_API_URL=${DJANGO_API_URL}
+      - DOMAIN=${DOMAIN}
     restart: unless-stopped
+    depends_on:
+      - backend
 
   backend:
     build:

@@ -1,18 +1,18 @@
 ---
 interface Props {
-  selectedMazoId: string | null;
+  selectedVersionId: string | null;
   selectedCardType: string | null;
   currentCardIndex: number;
   maxCardIndex: number;
 }
 
-const { selectedMazoId, selectedCardType, currentCardIndex, maxCardIndex } =
+const { selectedVersionId, selectedCardType, currentCardIndex, maxCardIndex } =
   Astro.props;
 ---
 
 <div
   class={`flex flex-row justify-center items-center gap-2 px-2 sm:px-6 max-w-full md:max-w-[50%] lg:max-w-[30%] mx-auto
-  ${!selectedMazoId ? "hidden" : ""}
+  ${!selectedVersionId ? "hidden" : ""}
   ${!selectedCardType ? "hidden" : ""}
   `}
 >
@@ -20,7 +20,7 @@ const { selectedMazoId, selectedCardType, currentCardIndex, maxCardIndex } =
     id="shuffle-btn"
     class="flex items-center justify-center px-4 py-2 w-1/3 rounded-md font-medium transition-colors duration-300 shadow-sm text-white bg-amber-600 hover:bg-amber-500"
   >
-    Mezclar Mazo
+    Mezclar
   </button>
 
   <div

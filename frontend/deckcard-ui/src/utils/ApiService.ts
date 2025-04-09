@@ -1,183 +1,151 @@
-// Servicio para manejar todas las llamadas a la API
+/**
+ * Servicio principal de API que actúa como fachada
+ * Implementa el patrón Facade para simplificar el acceso a los servicios específicos
+ * Sigue el principio de inversión de dependencias al depender de abstracciones (interfaces)
+ */
 
-// Interfaces para los tipos de datos
-export interface Mazo {
-  id: number;
-  nombre: string;
-  version: string;
-  fecha_creacion: string;
-}
+// Importar los tipos desde el módulo centralizado
+import type {
+  Version,
+  CartaPersonaje,
+  CartaNegocio,
+  CartaEspecial,
+  CartaEvento,
+  CartaObjetivo,
+  Room,
+  Participant,
+  ApiResponse,
+  BusinessIndustry,
+  BusinessUpgrade
+} from '../models/types';
 
-export interface CartaPersonaje {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  historia: string;
-  imagen: string;
-  dinero: number;
-  karma: number;
-  fama: number;
-  consignas_juego: string[];
-  mazo: number;
-}
+// Importar los servicios específicos
+import { VersionService } from '../services/VersionService';
+import { RoomService } from '../services/RoomService';
+import { ParticipantService } from '../services/ParticipantService';
 
-export interface CartaNegocio {
-  id: number;
-  nombre: string;
-  frase: string;
-  tipo: number;
-  precio: number;
-  beneficio_base: number;
-  beneficio_final: number;
-  consignas_juego: string[];
-  niveles_soportados: number[];
-  mazo: number;
-}
+// Importar utilidades para las peticiones HTTP
+import { dynamicApiUrl, HttpClient } from './ApiConfig';
 
-export interface CartaEspecial {
-  id: number;
-  titulo: string;
-  frase: string;
-  consignas_juego: string[];
-  imagen: string;
-  mazo: number;
-}
+// Importar datos de muestra como fallback
+import {
+  sampleVersion,
+  sampleCartaPersonaje,
+  sampleCartaNegocio,
+  sampleCartaEspecial,
+  sampleRoom,
+  sampleParticipant
+} from '../services/MockData';
 
-export interface Room {
-  code: string;
-  name: string;
-  mazo: Mazo;
-  status: string;
-  fecha_creacion: string;
-  participants: Participant[];
-  max_participants: number;
-}
+/**
+ * Clase principal de servicios de API que integra todos los servicios específicos
+ * Proporciona una interfaz unificada para acceder a todas las funcionalidades de la API
+ */
+export class ApiService {
+  // Servicios de Versión
+  static getVersions(): Promise<Version[]> {
+    return VersionService.getVersions();
+  }
 
-export interface Participant {
-  id: number;
-  name: string;
-  admin: boolean;
-  room: Room | null;
-  carta_personaje: CartaPersonaje | null;
-  cartas_negocios: CartaNegocio[] | null;
-  cartas_especiales: CartaEspecial[] | null;
-  dinero: number | null;
-  karma: number | null;
-  fama: number | null;
-}
+  static getCartasPersonaje(versionId: string | number | null): Promise<CartaPersonaje[]> {
+    return VersionService.getCartasPersonaje(versionId);
+  }
 
-// Datos de muestra como fallback
-export const sampleCartaPersonaje: CartaPersonaje = {
-  id: 1,
-  nombre: "Carlos Emprendedor",
-  descripcion: "Visionario de negocios con gran carisma",
-  historia: "Comenzó desde abajo y ahora es dueño de varios negocios en la ciudad",
-  imagen: "/placeholder-character.jpg",
-  dinero: 3600,
-  karma: 700,
-  fama: 500,
-  consignas_juego: [
-    "Comienza con +$500 extra",
-    "Puede comprar un negocio extra por turno",
-  ],
-  mazo: 1,
-};
+  static getCartasNegocio(versionId: string | number | null): Promise<CartaNegocio[]> {
+    return VersionService.getCartasNegocio(versionId);
+  }
 
-export const sampleCartaNegocio: CartaNegocio = {
-  id: 1,
-  nombre: "Café Internet",
-  frase: "Local de servicios digitales",
-  tipo: 1,
-  precio: 5000,
-  beneficio_base: 5,
-  beneficio_final: 8,
-  consignas_juego: [
-    "Cobras +2 por cada negocio tecnológico que poseas",
-    "Puedes mejorar este negocio por $1000 menos",
-  ],
-  niveles_soportados: [1, 2, 3],
-  mazo: 1,
-};
+  static getCartasEspeciales(versionId: string | number | null): Promise<CartaEspecial[]> {
+    return VersionService.getCartasEspeciales(versionId);
+  }
 
-export const sampleCartaEspecial: CartaEspecial = {
-  id: 1,
-  titulo: "Evento Inesperado",
-  frase: "La fortuna favorece a los audaces",
-  consignas_juego: [
-    "Roba 2 cartas adicionales en tu próximo turno",
-    "Puedes descartar esta carta para evitar un evento negativo",
-  ],
-  imagen: "/placeholder-special.jpg",
-  mazo: 1,
-};
+  static getCartasEvento(versionId: string | number | null): Promise<CartaEvento[]> {
+    return VersionService.getCartasEvento(versionId);
+  }
 
-export const sampleMazo: Mazo = {
-  id: 1,
-  nombre: "None",
-  version: "0.0",
-  fecha_creacion: "2024-03-17",
-};
+  static getCartasObjetivo(versionId: string | number | null): Promise<CartaObjetivo[]> {
+    return VersionService.getCartasObjetivo(versionId);
+  }
 
+  static getAllCartas(versionId: string | number) {
+    return VersionService.getAllCartas(versionId);
+  }
 
-export const sampleParticipant: Participant = {
-  id: 1,
-  name: "Jugador 1",
-  admin: false,
-  room: null,
-  carta_personaje: null,
-  cartas_negocios: null,
-  cartas_especiales: null,
-  dinero: 1000,
-  karma: 500,
-  fama: 300,
-};
+  // Servicios de Room
+  static getRooms(): Promise<Room[]> {
+    return RoomService.getRooms();
+  }
 
-export const sampleAdminParticipant: Participant = {
-  id: 1,
-  name: "Jugador 1",
-  admin: true,
-  room: null,
-  carta_personaje: null,
-  cartas_negocios: null,
-  cartas_especiales: null,
-  dinero: 1000,
-  karma: 500,
-  fama: 300,
-};
+  static getRoom(roomId: string): Promise<Room | null> {
+    return RoomService.getRoom(roomId);
+  }
 
-export const sampleRoom: Room = {
-  code: "000ABC",
-  name: "Sala de Prueba",
-  mazo: sampleMazo,
-  status: "created",
-  fecha_creacion: "2024-03-17",
-  max_participants: 6,
-  participants: [sampleAdminParticipant],
-};
+  static createRoom(
+    adminName: string,
+    roomName: string,
+    versionId: number,
+    maxParticipants: number = 6
+  ): Promise<Room> {
+    return RoomService.createRoom(adminName, roomName, versionId, maxParticipants);
+  }
 
-// Función para obtener los mazos desde la API
-export async function getMazosFromAPI(): Promise<Mazo[]> {
-  try {
-    const response = await fetch(`${import.meta.env.PUBLIC_API_URL}/api/mazos/`);
-    if (!response.ok) {
-      throw new Error(`Error: ${response.status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error("Error al obtener los mazos:", error);
-    // Si hay un error, devolver los datos de muestra como fallback
-    return [sampleMazo];
+  static getCurrentRoomId(): string | null {
+    return RoomService.getCurrentRoomId();
+  }
+
+  static setCurrentRoomId(roomId: string): void {
+    RoomService.setCurrentRoomId(roomId);
+  }
+
+  static clearCurrentRoomId(): void {
+    RoomService.clearCurrentRoomId();
+  }
+
+  // Servicios de Participant
+  static getParticipantsByRoom(roomCode: string): Promise<Participant[]> {
+    return ParticipantService.getParticipantsByRoom(roomCode);
+  }
+
+  static getParticipant(participantId: number): Promise<Participant | null> {
+    return ParticipantService.getParticipant(participantId);
+  }
+
+  static createParticipant(name: string, roomCode: string): Promise<Participant> {
+    return ParticipantService.createParticipant(name, roomCode);
+  }
+
+  static assignCharacterCard(
+    participantId: number,
+    cartaPersonajeId: number
+  ): Promise<Participant> {
+    return ParticipantService.assignCharacterCard(participantId, cartaPersonajeId);
+  }
+
+  static assignBusinessCard(
+    participantId: number,
+    cartaNegocioId: number
+  ): Promise<Participant> {
+    return ParticipantService.assignBusinessCard(participantId, cartaNegocioId);
+  }
+
+  static getCurrentParticipantId(): number | null {
+    return ParticipantService.getCurrentParticipantId();
+  }
+
+  static setCurrentParticipantId(participantId: number): void {
+    ParticipantService.setCurrentParticipantId(participantId);
+  }
+
+  static clearCurrentParticipantId(): void {
+    ParticipantService.clearCurrentParticipantId();
   }
 }
 
-// Función para obtener las cartas de personaje desde la API según el mazo seleccionado
-export async function getCartasPersonajeFromAPI(mazoId: string | null): Promise<CartaPersonaje[]> {
+// Función para obtener las cartas de personaje desde la API según la versión seleccionada
+export async function getCartasPersonajeFromAPI(versionId: string | null): Promise<CartaPersonaje[]> {
   try {
-    // Construir la URL dependiendo de si hay un mazo seleccionado
-    let url = `${import.meta.env.PUBLIC_API_URL}/api/personajes/`;
-    if (mazoId) {
-      url += `?mazo=${mazoId}`;
-    }
+    // Construir la URL dependiendo de si hay una versión seleccionada
+    const url = dynamicApiUrl(`personajes/?version=${versionId}`);
 
     console.log(`Fetching from URL: ${url}`);
     const response = await fetch(url);
@@ -197,12 +165,9 @@ export async function getCartasPersonajeFromAPI(mazoId: string | null): Promise<
 }
 
 // Función para obtener cartas de negocio
-export async function getCartasNegocioFromAPI(mazoId: string | null): Promise<CartaNegocio[]> {
+export async function getCartasNegocioFromAPI(versionId: string | null): Promise<CartaNegocio[]> {
   try {
-    let url = `${import.meta.env.PUBLIC_API_URL}/api/negocios/`;
-    if (mazoId) {
-      url += `?mazo=${mazoId}`;
-    }
+    const url = dynamicApiUrl(`negocios/?version=${versionId}`)
 
     const response = await fetch(url);
     if (!response.ok) {
@@ -216,13 +181,9 @@ export async function getCartasNegocioFromAPI(mazoId: string | null): Promise<Ca
 }
 
 // Función para obtener cartas especiales
-export async function getCartasEspecialesFromAPI(mazoId: string | null): Promise<CartaEspecial[]> {
+export async function getCartasEspecialesFromAPI(versionId: string | null): Promise<CartaEspecial[]> {
   try {
-    let url = `${import.meta.env.PUBLIC_API_URL}/api/especiales/`;
-    if (mazoId) {
-      url += `?mazo=${mazoId}`;
-    }
-
+    const url = dynamicApiUrl(`especiales/?version=${versionId}`);
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Error: ${response.status}`);
@@ -236,11 +197,12 @@ export async function getCartasEspecialesFromAPI(mazoId: string | null): Promise
 
 export async function getRoomsFromAPI(): Promise<Room[] | null> {
   try {
-    const response = await fetch(`${import.meta.env.PUBLIC_API_URL}/api/rooms`);
+    const response = await fetch(dynamicApiUrl('rooms'));
     if (!response.ok) {
       throw new Error(`Error: ${response.status}`);
     }
-    return await response.json();
+    const roomList: Room[] = await response.json();
+    return roomList;
   } catch (error) {
     console.error("Error al obtener las salas:", error);
     return null;
@@ -249,15 +211,15 @@ export async function getRoomsFromAPI(): Promise<Room[] | null> {
 
 export async function getRoomFromAPI(roomId: string | null): Promise<Room | null> {
   try {
-    const url = `${import.meta.env.PUBLIC_API_URL}/api/rooms/${roomId}`;
+    const url = dynamicApiUrl(`rooms/${roomId}`);
     console.log(`Fetching room from URL: ${url}`);
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Error: ${response.status}`);
     }
-    const roomData = await response.json();
+    const roomData: Room = await response.json();
     console.log("Room data received:", roomData);
-    return roomData.Room;
+    return roomData;
   } catch (error) {
     console.error("Error al obtener la sala:", error);
     return null;
@@ -265,34 +227,35 @@ export async function getRoomFromAPI(roomId: string | null): Promise<Room | null
 }
 
 export async function joinRoomFromAPI(roomId: string, playerName: string): Promise<Participant | null> {
+  const normalizedRoomId = roomId.trim().toUpperCase();
   try {
-    const url = `${import.meta.env.PUBLIC_API_URL}/api/rooms/${roomId}`;
-    console.log(`Checking room at URL: ${url}`);
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Error: ${response.status}`);
-    }
-    // Verificar si la respuesta contiene datos de la sala
-    const roomData = await response.json();
-    console.log("Room data for join:", roomData);
+    const currentRoom: Room | null = await getRoomFromAPI(normalizedRoomId);
 
-    if (!roomData || !roomData.room) {
-      console.error("Datos de sala inválidos:", roomData);
-      throw new Error("Datos de sala inválidos");
+    // Verificar si la respuesta tiene la estructura esperada
+    if (!currentRoom) {
+      console.error("Datos de sala inválidos:", currentRoom);
+      throw new Error("Datos de sala inválidos o formato inesperado");
     }
-
+    // sessionStorage.setItem(
+    //   "currentParticipantId",
+    //   currentParticipant.id.toString(),
+    // );
+    sessionStorage.setItem(
+      "currentRoom",
+      JSON.stringify(currentRoom),
+    );
     // Datos adicionales opcionales
     const userAgent = navigator.userAgent;
     const connectionTime = new Date().toISOString();
     // Agregar el participante a la sala
-    const participantUrl = `${import.meta.env.PUBLIC_API_URL}/api/rooms/${roomId}/participants`;
+    const participantUrl = dynamicApiUrl(`rooms/${roomId}/participants`);
     console.log(`Adding participant at URL: ${participantUrl}`);
 
     // Preparar datos para la solicitud
     const participantData = {
       name: playerName,
-      admin: false,
-      room: roomData.room,
+      // Note: admin is handled by the backend and set to false by default
+      // Note: room is already known from the URL path
       userAgent: userAgent,
     };
 
@@ -308,42 +271,64 @@ export async function joinRoomFromAPI(roomId: string, playerName: string): Promi
 
     if (!joinResponse.ok) {
       console.error(`Error al agregar participante: ${joinResponse.status}`);
-      const errorText = await joinResponse.text();
-      console.error("Detalles del error:", errorText);
-      throw new Error(`Error al agregar participante: ${joinResponse.status}`);
+      let errorMessage = `Error al agregar participante: ${joinResponse.status}`;
+      throw new Error(errorMessage);
     }
 
-    const responseData = await joinResponse.json();
+    const responseData: Participant = await joinResponse.json();
     console.log("Respuesta del servidor al crear participante:", responseData);
 
-    if (responseData && responseData.participant) {
-      return responseData.participant;
+    if (responseData) {
+      return responseData;
     } else {
       throw new Error("Formato de respuesta inesperado al crear participante");
     }
 
   } catch (error) {
     console.error("Error al unirse a la sala:", error);
-    throw error; // Re-lanzamos el error para que la interfaz pueda manejarlo
+    // Asegurarnos de devolver un Error con mensaje en lugar de re-lanzar directamente
+    if (error instanceof Error) {
+      throw new Error(error.message || "Error desconocido al unirse a la sala");
+    } else {
+      throw new Error("Error desconocido al unirse a la sala");
+    }
+  }
+}
+
+// Función para obtener versiones desde la API
+export async function getVersionsFromAPI(): Promise<Version[]> {
+  try {
+    const url = dynamicApiUrl('versions');
+    console.log(`Fetching versions from URL: ${url}`);
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`);
+    }
+    const versions = await response.json();
+    console.log("Versions data received:", versions);
+    return versions;
+  } catch (error) {
+    console.error("Error al obtener las versiones:", error);
+    return [sampleVersion];
   }
 }
 
 export async function createRoomOnAPI(
-  name: string,
   adminName: string,
-  mazoId: number,
+  roomName: string,
+  versionId: number,
   maxParticipants: number = 6
 ): Promise<Room> {
   try {
-    const response = await fetch(`${import.meta.env.PUBLIC_API_URL}/api/rooms/`, {
+    const response = await fetch(dynamicApiUrl('rooms'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name: name,
+        name: roomName,
         admin_name: adminName,
-        mazo: mazoId,
+        version: versionId,
         max_participants: maxParticipants
       }),
     });
@@ -354,13 +339,13 @@ export async function createRoomOnAPI(
     return data.room;
   } catch (error) {
     console.error("Error al crear la sala:", error);
-    return sampleRoom;
+    throw error;
   }
 }
 
 export async function createParticipantOnAPI(roomId: string | null): Promise<Participant> {
   try {
-    const response = await fetch(`${import.meta.env.PUBLIC_API_URL}/api/rooms/${roomId}/participants`, {
+    const response = await fetch(dynamicApiUrl(`rooms/${roomId}/participants`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -372,17 +357,52 @@ export async function createParticipantOnAPI(roomId: string | null): Promise<Par
     return await response.json();
   } catch (error) {
     console.error("Error al crear el participante:", error);
-    return sampleParticipant;
+    throw new Error("Error al crear el participante");
+  }
+}
+
+export async function getCurrentParticipantFromAPI(): Promise<Participant | null> {
+  try {
+    if (!sessionStorage.getItem("currentRoomId") || !sessionStorage.getItem("currentParticipantId")) {
+      return null;
+    }
+    const response = await fetch(dynamicApiUrl(`rooms/${sessionStorage.getItem("currentRoomId")}/participants/${sessionStorage.getItem("currentParticipantId")}`));
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`);
+    }
+    const participant: Participant = await response.json();
+    return participant;
+  } catch (error) {
+    console.error("Error al obtener el participante:", error);
+    return null;
+  }
+}
+
+export async function getCurrentRoomIdFromAPI(): Promise<Room> {
+  try {
+    const response = await fetch(dynamicApiUrl(`rooms/${sessionStorage.getItem("currentRoomId")}`));
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`);
+    }
+    const room: Room = await response.json();
+    return room;
+  } catch (error) {
+    console.error("Error al obtener la sala actual:", error);
+    return sampleRoom;
   }
 }
 
 export async function getParticipantsFromAPI(roomId: string | null): Promise<Participant[]> {
   try {
-    const response = await fetch(`${import.meta.env.PUBLIC_API_URL}/api/rooms/${roomId}/participants`);
+    if (!roomId) {
+      throw new Error("No se proporciona un ID de sala");
+    }
+    const response = await fetch(dynamicApiUrl(`rooms/${roomId}/participants`));
     if (!response.ok) {
       throw new Error(`Error: ${response.status}`);
     }
-    return await response.json();
+    const participants: Participant[] = await response.json();
+    return participants;
   } catch (error) {
     console.error("Error al obtener los participantes:", error);
     return [sampleParticipant];
